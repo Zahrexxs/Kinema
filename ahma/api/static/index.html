@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AHMA | Automated Motion Analysis</title>
+    <style>
+        :root {
+            --primary: #f542e6;
+            --secondary: #f57542;
+            --bg: #121212;
+            --surface: #1e1e1e;
+            --text: #ffffff;
+            --text-dim: #b3b3b3;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(to right, rgba(0, 0, 0, 0), var(--surface), rgba(0, 0, 0, 0));
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: var(--surface);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--text-dim);
+            padding: 3rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background-color: rgba(245, 66, 230, 0.05);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        button {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border: none;
+            padding: 12px 32px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 1rem;
+            font-weight: 500;
+            color: var(--text-dim);
+        }
+
+        .video-container {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, .3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>AHMA CORE</h1>
+        <p style="color: var(--text-dim)">Automated Bio-Mechanical Analysis System</p>
+    </header>
+
+    <div class="container">
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            <p id="fileName">Click to Select Video File</p>
+            <input type="file" id="fileInput" accept="video/*">
+        </div>
+
+        <button id="uploadBtn" onclick="uploadVideo()">Analyze Motion</button>
+
+        <div class="status" id="statusMessage">
+            Ready <span class="loader" id="loader"></span>
+        </div>
+
+        <div class="video-container" id="videoContainer">
+            <h3>Analysis Result</h3>
+            <video id="resultVideo" controls></video>
+            <p>
+                <a id="downloadLink" href="#" target="_blank"
+                    style="color: var(--primary); margin-right: 15px;">Download Video</a>
+                <a id="downloadCsv" href="#" target="_blank"
+                    style="color: var(--secondary); margin-right: 15px; display:none">Download
+                    CSV</a>
+                <a id="downloadPdf" href="#" target="_blank" style="color: var(--text); display:none">Download Report
+                    (PDF)</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileName');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const statusMsg = document.getElementById('statusMessage');
+        const loader = document.getElementById('loader');
+        const videoContainer = document.getElementById('videoContainer');
+        const resultVideo = document.getElementById('resultVideo');
+        const downloadLink = document.getElementById('downloadLink');
+        const downloadCsv = document.getElementById('downloadCsv');
+        const downloadPdf = document.getElementById('downloadPdf');
+
+        let currentJobId = null;
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileNameDisplay.textContent = e.target.files[0].name;
+            }
+        });
+
+        async function uploadVideo() {
+            if (fileInput.files.length === 0) {
+                alert("Please select a video first.");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            uploadBtn.disabled = true;
+            statusMsg.innerText = "Uploading...";
+            loader.style.display = "inline-block";
+            videoContainer.style.display = "none";
+
+            try {
+                const response = await fetch('/analyze/video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                currentJobId = data.job_id;
+                statusMsg.innerText = "Processing... (This may take a minute)";
+
+                pollStatus();
+            } catch (error) {
+                console.error(error);
+                statusMsg.innerText = "Error uploading file.";
+                uploadBtn.disabled = false;
+                loader.style.display = "none";
+            }
+        }
+
+        async function pollStatus() {
+            if (!currentJobId) return;
+
+            try {
+                const response = await fetch(`/status/${currentJobId}`);
+                const data = await response.json();
+
+                if (data.status === 'completed') {
+                    const timeText = data.processing_time ? ` (${data.processing_time}s)` : "";
+                    statusMsg.innerText = "Analysis Complete!" + timeText;
+                    loader.style.display = "none";
+                    uploadBtn.disabled = false;
+
+                    resultVideo.src = data.download_url;
+                    downloadLink.href = data.download_url;
+
+                    if (data.csv_url) {
+                        downloadCsv.href = data.csv_url;
+                        downloadCsv.style.display = "inline";
+                    }
+
+                    if (data.pdf_url) {
+                        downloadPdf.href = data.pdf_url;
+                        downloadPdf.style.display = "inline";
+                    }
+
+                    videoContainer.style.display = "block";
+                } else if (data.status.startsWith('failed')) {
+                    statusMsg.innerText = "Analysis Failed: " + data.status;
+                    loader.style.display = "none";
+                    uploadBtn.disabled = false;
+                } else {
+                    // Still processing
+                    setTimeout(pollStatus, 2000);
+                }
+            } catch (error) {
+                console.error(error);
+                setTimeout(pollStatus, 5000);
+            }
+        }
+    </script>
+</body>
+
+</html>
