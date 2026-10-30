@@ -1,10 +1,32 @@
+<div align="center">
+
 # AHMA — Automated Human Motion Analysis
+
+**Raw video in. Joint angles, plots and a PDF report out.**
+
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/fastapi-0.100%2B-009688?logo=fastapi&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/mediapipe-0.10%2B-00897B?logo=google&logoColor=white)
+![OpenCV](https://img.shields.io/badge/opencv-4.8%2B-5C3EE8?logo=opencv&logoColor=white)
+
+</div>
+
+---
 
 Turns raw video into biomechanical measurements you can actually read: joint-angle
 time series, CSV exports, and PDF reports, from a pose-estimation model rather than
 a marker or sensor rig.
 
-Built with MediaPipe's Pose Landmarker, OpenCV, and FastAPI.
+## Contents
+
+- [Why this exists](#why-this-exists)
+- [How it works](#how-it-works)
+- [Layout](#layout)
+- [Setup](#setup)
+- [Usage](#usage)
+- [Outputs](#outputs)
+- [Known limitations](#known-limitations)
+- [License](#license)
 
 ## Why this exists
 
@@ -124,5 +146,6 @@ Worth stating plainly, since several are real:
 
 ## License
 
-See the repository. MediaPipe model weights are downloaded separately and carry
-Google's own license terms.
+No license file is included in this repository, so all rights are reserved.
+MediaPipe model weights are downloaded separately and carry Google's own license
+terms.
