@@ -32,7 +32,7 @@ class FakeLandmarker:
 
 @pytest.fixture
 def make_estimator(monkeypatch, tmp_path):
-    def _make(landmarks=None, static_image_mode=False):
+    def _make(landmarks=None, static_image_mode=False, num_poses=1):
         model = tmp_path / "pose_landmarker_full.task"
         model.write_bytes(b"stub")
         monkeypatch.setattr(pose_engine, "resolve_model_path", lambda base_dir, complexity: model)
@@ -50,6 +50,7 @@ def make_estimator(monkeypatch, tmp_path):
         class PoseLandmarker:
             @staticmethod
             def create_from_options(options):
+                landmarker.options = options.kwargs
                 return landmarker
 
         vision = SimpleNamespace(
@@ -61,7 +62,10 @@ def make_estimator(monkeypatch, tmp_path):
         monkeypatch.setattr(pose_engine, "python", SimpleNamespace(BaseOptions=BaseOptions))
         monkeypatch.setattr(pose_engine, "vision", vision)
 
-        return MediaPipeEstimator(static_image_mode=static_image_mode), landmarker
+        return (
+            MediaPipeEstimator(static_image_mode=static_image_mode, num_poses=num_poses),
+            landmarker,
+        )
 
     return _make
 
@@ -99,18 +103,31 @@ def test_landmark_names_cover_all_33_points(make_estimator, index, name):
 def test_process_frame_maps_raw_landmarks(make_estimator):
     estimator, _ = make_estimator(landmarks=[raw_landmarks()])
 
-    result = estimator.process_frame(frame())
+    poses = estimator.process_frame(frame())
 
-    assert len(result) == 33
-    assert result["nose"].x == pytest.approx(0.0)
-    assert result["left_shoulder"].x == pytest.approx(0.11)
-    assert result["right_foot_index"].visibility == pytest.approx(0.9)
+    assert len(poses) == 1
+    landmarks = poses[0]
+    assert len(landmarks) == 33
+    assert landmarks["nose"].x == pytest.approx(0.0)
+    assert landmarks["left_shoulder"].x == pytest.approx(0.11)
+    assert landmarks["right_foot_index"].visibility == pytest.approx(0.9)
 
 
-def test_process_frame_returns_none_without_pose(make_estimator):
+def test_process_frame_returns_empty_list_without_pose(make_estimator):
     estimator, _ = make_estimator(landmarks=None)
 
-    assert estimator.process_frame(frame()) is None
+    assert estimator.process_frame(frame()) == []
+
+
+def test_num_poses_is_forwarded_and_caps_detections(make_estimator):
+    estimator, landmarker = make_estimator(
+        landmarks=[raw_landmarks(), raw_landmarks()], num_poses=2
+    )
+
+    poses = estimator.process_frame(frame())
+
+    assert landmarker.options["num_poses"] == 2
+    assert len(poses) == 2
 
 
 def test_explicit_timestamps_are_used_and_stay_monotonic(make_estimator):

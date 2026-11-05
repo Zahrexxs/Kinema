@@ -49,26 +49,38 @@ def test_process_video_writes_beside_the_output(synthetic_video, tmp_path, monke
     assert "clip_report.pdf" in printed
 
 
-def test_main_passes_the_resolved_complexity(monkeypatch, tmp_path):
+def test_main_passes_the_resolved_options(monkeypatch, tmp_path):
     calls = {}
 
-    def fake_process_video(input_path, output_path, model_complexity, min_visibility):
+    def fake_process_video(input_path, output_path, model_complexity, min_visibility, max_people):
         calls.update(
             input_path=input_path,
             output_path=output_path,
             model_complexity=model_complexity,
             min_visibility=min_visibility,
+            max_people=max_people,
         )
 
     monkeypatch.setattr(run, "process_video", fake_process_video)
     monkeypatch.setattr(
         "sys.argv",
-        ["kinema", "--input", "clip.mp4", "--output", "out.mp4", "--complexity", "heavy"],
+        [
+            "kinema",
+            "--input",
+            "clip.mp4",
+            "--output",
+            "out.mp4",
+            "--complexity",
+            "heavy",
+            "--max-people",
+            "2",
+        ],
     )
 
     run.main()
 
     assert calls["model_complexity"] == 2
+    assert calls["max_people"] == 2
     assert calls["output_path"].endswith("out.mp4")
 
 

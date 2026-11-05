@@ -132,7 +132,11 @@ def _save_upload(file: UploadFile, destination: Path) -> None:
 
 
 def process_video_task(
-    job_id: str, input_path: Path, output_dir: Path, model_complexity: int
+    job_id: str,
+    input_path: Path,
+    output_dir: Path,
+    model_complexity: int,
+    max_people: int = 1,
 ) -> None:
     """Background task wrapper around the shared analysis pipeline."""
     _update_job(job_id, status=JobState.PROCESSING)
@@ -144,6 +148,7 @@ def process_video_task(
             output_stem=job_id,
             model_complexity=model_complexity,
             min_visibility=settings.visibility_threshold,
+            max_people=max_people,
         )
     except Exception as exc:
         logger.exception("Job %s failed", job_id)
@@ -179,6 +184,7 @@ async def analyze_video_endpoint(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     complexity: str | None = Form(default=None),
+    max_people: int = Form(default=1),
 ):
     _ensure_dirs()
     _sweep_expired()
@@ -191,6 +197,11 @@ async def analyze_video_endpoint(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    if not 1 <= max_people <= 4:
+        raise HTTPException(
+            status_code=400, detail=f"max_people must be between 1 and 4 (got {max_people})"
+        )
 
     job_id = str(uuid.uuid4())
     upload_dir = UPLOAD_DIR / job_id
@@ -207,7 +218,12 @@ async def analyze_video_endpoint(
         jobs[job_id] = Job(id=job_id)
 
     background_tasks.add_task(
-        process_video_task, job_id, input_path, OUTPUT_DIR / job_id, model_complexity
+        process_video_task,
+        job_id,
+        input_path,
+        OUTPUT_DIR / job_id,
+        model_complexity,
+        max_people,
     )
 
     return AnalyzeResponse(job_id=job_id, status=JobState.QUEUED)

@@ -169,6 +169,14 @@
                 <option value="full" selected>Full — balanced</option>
                 <option value="heavy">Heavy — most accurate</option>
             </select>
+
+            <label for="maxPeople">People</label>
+            <select id="maxPeople">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select>
         </div>
 
         <button id="uploadBtn" onclick="uploadVideo()">Analyze Motion</button>
@@ -197,6 +205,7 @@
         const fileNameDisplay = document.getElementById('fileName');
         const uploadBtn = document.getElementById('uploadBtn');
         const complexitySelect = document.getElementById('complexity');
+        const maxPeopleSelect = document.getElementById('maxPeople');
         const statusMsg = document.getElementById('statusMessage');
         const loader = document.getElementById('loader');
         const videoContainer = document.getElementById('videoContainer');
@@ -223,6 +232,7 @@
             const formData = new FormData();
             formData.append('file', file);
             formData.append('complexity', complexitySelect.value);
+            formData.append('max_people', maxPeopleSelect.value);
 
             uploadBtn.disabled = true;
             statusMsg.innerText = "Uploading...";

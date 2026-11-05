@@ -160,6 +160,39 @@ def test_raises_when_no_pose_is_detected(synthetic_video, tmp_path):
     assert not list(output_dir.glob("*.csv"))
 
 
+def test_tracks_multiple_people(synthetic_video, tmp_path):
+    first = {
+        "left_shoulder": loc(0.2, 0.3),
+        "left_elbow": loc(0.25, 0.45),
+        "left_wrist": loc(0.3, 0.6),
+        "left_hip": loc(0.2, 0.55),
+        "left_knee": loc(0.2, 0.7),
+        "left_ankle": loc(0.2, 0.85),
+    }
+    second = {name: loc(value.x + 0.5, value.y) for name, value in first.items()}
+
+    result = analyze_video(
+        synthetic_video(frames=3),
+        tmp_path / "out",
+        estimator=FakeEstimator(poses=[first, second]),
+        max_people=2,
+        write_pdf=False,
+    )
+
+    with result.csv_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert len(rows) == 6
+    assert sorted({row["person_id"] for row in rows}) == ["1", "2"]
+    assert all(row["left_knee_angle"] for row in rows)
+
+
+@pytest.mark.parametrize("max_people", [0, 5, -1])
+def test_rejects_invalid_max_people(tmp_path, max_people):
+    with pytest.raises(ValueError, match="max_people must be between 1 and"):
+        analyze_video("clip.mp4", tmp_path, max_people=max_people)
+
+
 def test_csv_reports_tracked_landmarks_and_2d_angles(synthetic_video, tmp_path):
     result = analyze_video(
         synthetic_video(frames=3),

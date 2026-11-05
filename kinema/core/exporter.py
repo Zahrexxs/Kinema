@@ -10,7 +10,7 @@ from fpdf import FPDF
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
-NON_METRIC_COLUMNS = {"frame", "timestamp", "tracked_landmarks"}
+NON_METRIC_COLUMNS = {"frame", "timestamp", "person_id", "tracked_landmarks"}
 TABLE_WIDTH_MM = 190.0
 
 
@@ -24,9 +24,14 @@ class MotionExporter:
         timestamp: float,
         metrics: dict[str, float],
         tracked: int | None = None,
+        person_id: int = 0,
     ) -> None:
-        """Accumulate data for a single frame."""
-        record: dict[str, float] = {"frame": frame_idx, "timestamp": timestamp}
+        """Accumulate data for a single frame and person."""
+        record: dict[str, float] = {
+            "frame": frame_idx,
+            "timestamp": timestamp,
+            "person_id": person_id,
+        }
         if tracked is not None:
             record["tracked_landmarks"] = tracked
         record.update(metrics)
@@ -38,12 +43,14 @@ class MotionExporter:
         df.to_csv(output_path, index=False)
         return output_path
 
-    def _plot_metric(self, df: pd.DataFrame, metric: str, path: str) -> None:
+    def _plot_metric(
+        self, df: pd.DataFrame, metric: str, path: str, title: str | None = None
+    ) -> None:
         figure = Figure(figsize=(10, 4))
         FigureCanvasAgg(figure)
         axes = figure.add_subplot(111)
         axes.plot(df["timestamp"], df[metric])
-        axes.set_title(f"{metric.replace('_', ' ').title()} over Time")
+        axes.set_title(title or f"{metric.replace('_', ' ').title()} over Time")
         axes.set_xlabel("Time (s)")
         axes.set_ylabel("Angle (deg)")
         axes.grid(True)
@@ -83,12 +90,23 @@ class MotionExporter:
         # Frames where a joint was not tracked leave gaps; ignore empty columns.
         metrics = self._metric_columns(df)
 
+        people = sorted(int(person) for person in df["person_id"].unique())
+        multiple_people = len(people) > 1
+
         # 1. Generate Plots
         plot_files = []
-        for metric in metrics:
-            plot_path = os.path.join(output_dir, f"{job_id}_{metric}.png")
-            self._plot_metric(df, metric, plot_path)
-            plot_files.append((metric, plot_path))
+        for person in people:
+            person_df = df[df["person_id"] == person]
+            for metric in metrics:
+                if person_df[metric].notna().sum() == 0:
+                    continue
+                suffix = f"_p{person}" if multiple_people else ""
+                plot_path = os.path.join(output_dir, f"{job_id}_{metric}{suffix}.png")
+                title = f"{metric.replace('_', ' ').title()} over Time"
+                if multiple_people:
+                    title = f"Person {person} — {title}"
+                self._plot_metric(person_df, metric, plot_path, title=title)
+                plot_files.append((metric, person, plot_path))
 
         # 2. Create PDF
         pdf = FPDF()
@@ -119,18 +137,21 @@ class MotionExporter:
         pdf.set_font("Helvetica", "", 10)
 
         rows = [("Metric", "Min", "Max", "Mean")]
-        for metric in metrics:
-            values = df[metric].dropna()
-            if values.empty:
-                continue
-            rows.append(
-                (
-                    metric.replace("_", " "),
-                    f"{values.min():.1f}",
-                    f"{values.max():.1f}",
-                    f"{values.mean():.1f}",
+        for person in people:
+            person_df = df[df["person_id"] == person]
+            prefix = f"P{person} " if multiple_people else ""
+            for metric in metrics:
+                values = person_df[metric].dropna()
+                if values.empty:
+                    continue
+                rows.append(
+                    (
+                        f"{prefix}{metric.replace('_', ' ')}",
+                        f"{values.min():.1f}",
+                        f"{values.max():.1f}",
+                        f"{values.mean():.1f}",
+                    )
                 )
-            )
 
         if len(rows) > 1:
             widths = self._table_widths(pdf, rows)
@@ -145,13 +166,16 @@ class MotionExporter:
         pdf.set_font("Helvetica", "B", 14)
         pdf.cell(0, 10, "Motion Graphs", new_x="LMARGIN", new_y="NEXT")
 
-        for name, path in plot_files:
+        for name, person, path in plot_files:
             pdf.add_page()
             pdf.set_font("Helvetica", "B", 12)
+            heading = name.replace("_", " ").title()
+            if multiple_people:
+                heading = f"Person {person} — {heading}"
             pdf.cell(
                 0,
                 10,
-                name.replace("_", " ").title(),
+                heading,
                 new_x="LMARGIN",
                 new_y="NEXT",
             )

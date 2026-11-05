@@ -56,6 +56,19 @@ def test_tracked_landmarks_are_exported_to_csv(tmp_path):
     with output.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     assert rows[0]["tracked_landmarks"] == "21"
+    assert rows[0]["person_id"] == "0"
+
+
+def test_person_id_is_exported(tmp_path):
+    exporter = MotionExporter()
+    exporter.add_frame_data(0, 0.0, {"left_elbow_angle": 90.0}, tracked=21, person_id=2)
+
+    output = tmp_path / "metrics.csv"
+    exporter.export_csv(str(output))
+
+    with output.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["person_id"] == "2"
 
 
 def test_metric_columns_skip_bookkeeping_and_empty_series():
@@ -64,12 +77,14 @@ def test_metric_columns_skip_bookkeeping_and_empty_series():
             {
                 "frame": 0,
                 "timestamp": 0.0,
+                "person_id": 1,
                 "tracked_landmarks": 20,
                 "left_elbow_angle": 90.0,
             },
             {
                 "frame": 1,
                 "timestamp": 1 / 30,
+                "person_id": 1,
                 "tracked_landmarks": 18,
                 "right_knee_angle": None,
             },

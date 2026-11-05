@@ -27,6 +27,7 @@ def process_video(
     output_path: str,
     model_complexity: int = 1,
     min_visibility: float = DEFAULT_MIN_VISIBILITY,
+    max_people: int = 1,
 ) -> AnalysisResult:
     """Analyze a video, writing the annotated video and reports beside output_path."""
     output = Path(output_path)
@@ -36,6 +37,7 @@ def process_video(
         output_stem=output.stem,
         model_complexity=model_complexity,
         min_visibility=min_visibility,
+        max_people=max_people,
         progress=_log_progress,
     )
     print()
@@ -69,6 +71,13 @@ def main() -> None:
         default=None,
         help="Pose model size (default: KINEMA_MODEL_COMPLEXITY, else full)",
     )
+    parser.add_argument(
+        "--max-people",
+        type=int,
+        choices=[1, 2, 3, 4],
+        default=1,
+        help="How many people to detect and track (default: 1)",
+    )
 
     args = parser.parse_args()
 
@@ -83,6 +92,7 @@ def main() -> None:
             str(args.output),
             model_complexity,
             settings.visibility_threshold,
+            args.max_people,
         )
     except (RuntimeError, FileNotFoundError) as exc:
         raise SystemExit(f"Error: {exc}") from None
