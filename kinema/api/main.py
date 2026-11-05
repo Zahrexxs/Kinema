@@ -14,12 +14,16 @@ from fastapi.staticfiles import StaticFiles
 
 from kinema.api.schemas import AnalyzeResponse, Job, JobState, JobStatusResponse
 from kinema.config import get_settings
-from kinema.core.models import complexity_from_name
+from kinema.core.model_registry import complexity_from_name
 from kinema.core.pipeline import analyze_video
 
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+logging.basicConfig(
+    level=settings.log_level,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 UPLOAD_DIR = Path(settings.upload_dir)
 OUTPUT_DIR = Path(settings.output_dir)
@@ -138,6 +142,7 @@ def process_video_task(
             output_dir,
             output_stem=job_id,
             model_complexity=model_complexity,
+            min_visibility=settings.visibility_threshold,
         )
     except Exception as exc:
         logger.exception("Job %s failed", job_id)

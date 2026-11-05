@@ -7,7 +7,7 @@ from typing import Callable
 import cv2
 
 from kinema.core.exporter import MotionExporter
-from kinema.core.metrics import MotionAnalyzer
+from kinema.core.metrics import DEFAULT_MIN_VISIBILITY, MotionAnalyzer
 from kinema.core.pose_engine import MediaPipeEstimator, PoseEstimator
 from kinema.vis.visualizer import Visualizer
 
@@ -55,6 +55,7 @@ def analyze_video(
     output_stem: str | None = None,
     model_complexity: int = 1,
     estimator: PoseEstimator | None = None,
+    min_visibility: float = DEFAULT_MIN_VISIBILITY,
     write_csv: bool = True,
     write_pdf: bool = True,
     progress: Callable[[int], None] | None = None,
@@ -96,7 +97,7 @@ def analyze_video(
             )
 
         analyzer = MotionAnalyzer(fps=fps, smooth_landmarks=True)
-        visualizer = Visualizer()
+        visualizer = Visualizer(min_visibility=min_visibility)
         exporter = MotionExporter()
 
         writer, annotated_path = _open_writer(out_dir, stem, fps, (width, height))
@@ -114,8 +115,9 @@ def analyze_video(
 
             if landmarks:
                 smoothed = analyzer.update_landmarks(landmarks, timestamp_s)
-                metrics = analyzer.compute_metrics(smoothed)
-                exporter.add_frame_data(frame_count, timestamp_s, metrics)
+                metrics = analyzer.compute_metrics(smoothed, min_visibility)
+                tracked = analyzer.count_tracked(smoothed, min_visibility)
+                exporter.add_frame_data(frame_count, timestamp_s, metrics, tracked=tracked)
                 output_frame = visualizer.draw_skeleton(output_frame, smoothed)
                 output_frame = visualizer.draw_metrics(output_frame, metrics, smoothed)
 

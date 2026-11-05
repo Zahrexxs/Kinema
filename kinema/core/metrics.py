@@ -1,15 +1,38 @@
-import numpy as np
 import math
-from typing import Dict, Optional, List, Deque
-from collections import deque
+from typing import Dict, Optional
+
+import numpy as np
+
 from kinema.core.types import Location
+
+DEFAULT_MIN_VISIBILITY = 0.5
+
+# Each angle is measured at the middle landmark of the triplet.
+ANGLE_TRIPLETS: Dict[str, tuple[str, str, str]] = {
+    "left_elbow_angle": ("left_shoulder", "left_elbow", "left_wrist"),
+    "right_elbow_angle": ("right_shoulder", "right_elbow", "right_wrist"),
+    "left_knee_angle": ("left_hip", "left_knee", "left_ankle"),
+    "right_knee_angle": ("right_hip", "right_knee", "right_ankle"),
+    "left_hip_angle": ("left_shoulder", "left_hip", "left_knee"),
+    "right_hip_angle": ("right_shoulder", "right_hip", "right_knee"),
+}
+
 
 class OneEuroFilter:
     """
     Adaptive low-pass filter (One Euro Filter) for smoothing noisy signals.
     Minimizes jitter at low speeds while maintaining responsiveness at high speeds.
     """
-    def __init__(self, t0, x0, dx0=0.0, min_cutoff=1.0, beta=0.0, d_cutoff=1.0):
+
+    def __init__(
+        self,
+        t0: float,
+        x0: float,
+        dx0: float = 0.0,
+        min_cutoff: float = 1.0,
+        beta: float = 0.0,
+        d_cutoff: float = 1.0,
+    ) -> None:
         self.t_prev = t0
         self.x_prev = x0
         self.dx_prev = dx0
@@ -17,16 +40,16 @@ class OneEuroFilter:
         self.beta = beta
         self.d_cutoff = d_cutoff
 
-    def smoothing_factor(self, t_e, cutoff):
+    def smoothing_factor(self, t_e: float, cutoff: float) -> float:
         r = 2 * math.pi * cutoff * t_e
         return r / (r + 1)
 
-    def exponential_smoothing(self, a, x, x_prev):
+    def exponential_smoothing(self, a: float, x: float, x_prev: float) -> float:
         return a * x + (1 - a) * x_prev
 
-    def __call__(self, t, x):
+    def __call__(self, t: float, x: float) -> float:
         t_e = t - self.t_prev
-        
+
         # Prevent division by zero or negative time deltas
         if t_e <= 0:
             return self.x_prev
@@ -44,20 +67,18 @@ class OneEuroFilter:
         self.t_prev = t
         return x_hat
 
+
 class MotionAnalyzer:
-    def __init__(self, fps: float = 30.0, smooth_landmarks: bool = True):
+    def __init__(self, fps: float = 30.0, smooth_landmarks: bool = True) -> None:
         if fps <= 0:
             raise ValueError(f"fps must be positive (got {fps!r})")
         self.fps = fps
         self.dt = 1.0 / fps
         self.use_filters = smooth_landmarks
-        
+
         # Filters for each coordinate of each landmark: {landmark_name: {axis: OneEuroFilter}}
         self.filters: Dict[str, Dict[str, OneEuroFilter]] = {}
         self.current_time = 0.0
-        
-        # History for velocity calc: {landmark_name: deque([(time, value), ...])}
-        self.velocity_history = {} # simple 2-frame delta for now
 
     def _get_filter(self, name: str, axis: str, initial_value: float) -> OneEuroFilter:
         if name not in self.filters:
@@ -65,11 +86,11 @@ class MotionAnalyzer:
         if axis not in self.filters[name]:
             # Parameters tuned for human motion (approximate)
             self.filters[name][axis] = OneEuroFilter(
-                t0=self.current_time, 
-                x0=initial_value, 
-                min_cutoff=1.0, # 1 Hz cutoff at low speed (reduces jitter)
-                beta=0.007,      # Responsiveness factor
-                d_cutoff=1.0
+                t0=self.current_time,
+                x0=initial_value,
+                min_cutoff=1.0,  # 1 Hz cutoff at low speed (reduces jitter)
+                beta=0.007,  # Responsiveness factor
+                d_cutoff=1.0,
             )
         return self.filters[name][axis]
 
@@ -85,26 +106,26 @@ class MotionAnalyzer:
             self.current_time += self.dt
         else:
             self.current_time = t
-        
+
         if not self.use_filters:
             return landmarks
 
         smoothed = {}
         for name, loc in landmarks.items():
             # Filter X
-            f_x = self._get_filter(name, 'x', loc.x)
+            f_x = self._get_filter(name, "x", loc.x)
             new_x = f_x(self.current_time, loc.x)
-            
+
             # Filter Y
-            f_y = self._get_filter(name, 'y', loc.y)
+            f_y = self._get_filter(name, "y", loc.y)
             new_y = f_y(self.current_time, loc.y)
-            
+
             # Filter Z
-            f_z = self._get_filter(name, 'z', loc.z)
+            f_z = self._get_filter(name, "z", loc.z)
             new_z = f_z(self.current_time, loc.z)
 
             smoothed[name] = Location(new_x, new_y, new_z, loc.visibility)
-            
+
         return smoothed
 
     def calculate_angle_3d(self, a: Location, b: Location, c: Location) -> float:
@@ -119,7 +140,7 @@ class MotionAnalyzer:
 
         # Dot product
         dot_product = np.dot(ba, bc)
-        
+
         # Magnitudes
         norm_ba = np.linalg.norm(ba)
         norm_bc = np.linalg.norm(bc)
@@ -128,10 +149,10 @@ class MotionAnalyzer:
             return 0.0
 
         cosine_angle = dot_product / (norm_ba * norm_bc)
-        
+
         # Clamp for numerical stability
         cosine_angle = np.clip(cosine_angle, -1.0, 1.0)
-        
+
         angle = np.arccos(cosine_angle)
         return np.degrees(angle)
 
@@ -151,50 +172,48 @@ class MotionAnalyzer:
 
         return np.degrees(angle)
 
-    def compute_metrics(self, landmarks: Dict[str, Location]) -> Dict[str, float]:
-        """Compute standard biomechanical angles."""
-        metrics = {}
-        
-        # Helper to safely get landmarks
-        def get_loc(name):
-            return landmarks.get(name)
+    def count_tracked(
+        self, landmarks: Dict[str, Location], min_visibility: Optional[float] = None
+    ) -> int:
+        """Number of landmarks confident enough to be trusted."""
+        threshold = DEFAULT_MIN_VISIBILITY if min_visibility is None else min_visibility
+        return sum(1 for loc in landmarks.values() if loc.visibility >= threshold)
 
-        # 1. Elbow Angles (Flexion/Extension)
-        # Left Elbow: L_Shoulder - L_Elbow - L_Wrist
-        ls = get_loc('left_shoulder')
-        le = get_loc('left_elbow')
-        lw = get_loc('left_wrist')
-        if ls and le and lw:
-            metrics['left_elbow_angle'] = self.calculate_angle_3d(ls, le, lw)
+    def _triplet(
+        self,
+        landmarks: Dict[str, Location],
+        names: tuple[str, str, str],
+        min_visibility: float,
+    ) -> Optional[tuple[Location, Location, Location]]:
+        points = []
+        for name in names:
+            location = landmarks.get(name)
+            if location is None or location.visibility < min_visibility:
+                return None
+            points.append(location)
+        return points[0], points[1], points[2]
 
-        # Right Elbow
-        rs = get_loc('right_shoulder')
-        re = get_loc('right_elbow')
-        rw = get_loc('right_wrist')
-        if rs and re and rw:
-            metrics['right_elbow_angle'] = self.calculate_angle_3d(rs, re, rw)
+    def compute_metrics(
+        self,
+        landmarks: Dict[str, Location],
+        min_visibility: Optional[float] = None,
+    ) -> Dict[str, float]:
+        """Compute biomechanical angles for every fully visible joint chain.
 
-        # 2. Knee Angles
-        # Left Knee: L_Hip - L_Knee - L_Ankle
-        lh = get_loc('left_hip')
-        lk = get_loc('left_knee')
-        la = get_loc('left_ankle')
-        if lh and lk and la:
-            metrics['left_knee_angle'] = self.calculate_angle_3d(lh, lk, la)
+        An angle is only reported when all three contributing landmarks clear
+        ``min_visibility``; a landmark the model is unsure about would otherwise
+        produce a confident-looking but meaningless number. Both the 3D angle and
+        the image-plane (2D) projection are emitted.
+        """
+        threshold = DEFAULT_MIN_VISIBILITY if min_visibility is None else min_visibility
 
-        # Right Knee
-        rh = get_loc('right_hip')
-        rk = get_loc('right_knee')
-        ra = get_loc('right_ankle')
-        if rh and rk and ra:
-            metrics['right_knee_angle'] = self.calculate_angle_3d(rh, rk, ra)
-
-        # 3. Hip Angles (Trunk-Thigh)
-        # Left Hip: L_Shoulder - L_Hip - L_Knee
-        if ls and lh and lk:
-            metrics['left_hip_angle'] = self.calculate_angle_3d(ls, lh, lk)
-            
-        if rs and rh and rk:
-            metrics['right_hip_angle'] = self.calculate_angle_3d(rs, rh, rk)
+        metrics: Dict[str, float] = {}
+        for name, names in ANGLE_TRIPLETS.items():
+            points = self._triplet(landmarks, names, threshold)
+            if points is None:
+                continue
+            a, b, c = points
+            metrics[name] = self.calculate_angle_3d(a, b, c)
+            metrics[f"{name}_2d"] = self.calculate_angle_2d(a, b, c)
 
         return metrics

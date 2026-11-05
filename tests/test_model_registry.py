@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from kinema.core.models import complexity_from_name, model_filename, resolve_model_path
+from kinema.core.model_registry import complexity_from_name, model_filename, resolve_model_path
 
 
 @pytest.mark.parametrize(

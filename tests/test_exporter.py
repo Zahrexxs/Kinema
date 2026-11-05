@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 
 import matplotlib
+import pandas as pd
 import pytest
 
 matplotlib.use("Agg")
@@ -43,3 +44,64 @@ def test_generate_report_creates_pdf(tmp_path):
     assert pdf_path == str(tmp_path / "job-1_report.pdf")
     assert Path(pdf_path).is_file()
     assert Path(pdf_path).stat().st_size > 0
+
+
+def test_tracked_landmarks_are_exported_to_csv(tmp_path):
+    exporter = MotionExporter()
+    exporter.add_frame_data(0, 0.0, {"left_elbow_angle": 90.0}, tracked=21)
+
+    output = tmp_path / "metrics.csv"
+    exporter.export_csv(str(output))
+
+    with output.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows[0]["tracked_landmarks"] == "21"
+
+
+def test_metric_columns_skip_bookkeeping_and_empty_series():
+    frame = pd.DataFrame(
+        [
+            {
+                "frame": 0,
+                "timestamp": 0.0,
+                "tracked_landmarks": 20,
+                "left_elbow_angle": 90.0,
+            },
+            {
+                "frame": 1,
+                "timestamp": 1 / 30,
+                "tracked_landmarks": 18,
+                "right_knee_angle": None,
+            },
+        ]
+    )
+
+    assert MotionExporter._metric_columns(frame) == ["left_elbow_angle"]
+
+
+def test_generate_report_handles_sparse_metrics_and_cleans_up(tmp_path):
+    exporter = MotionExporter()
+    exporter.add_frame_data(0, 0.0, {"left_elbow_angle": 90.0}, tracked=20)
+    exporter.add_frame_data(1, 1 / 30, {"right_knee_angle": 170.0}, tracked=18)
+
+    pdf_path = exporter.generate_report("job-sparse", str(tmp_path), 0.1)
+
+    assert Path(pdf_path).is_file()
+    assert not list(tmp_path.glob("*.png"))
+
+
+def test_table_widths_fit_the_page():
+    from fpdf import FPDF
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "", 10)
+    rows = [
+        ("Metric", "Min", "Max", "Mean"),
+        ("right shoulder angle 2d", "10.0", "170.0", "90.0"),
+    ]
+
+    widths = MotionExporter._table_widths(pdf, rows)
+
+    assert sum(widths) <= 190.0
+    assert all(width > 0 for width in widths)
