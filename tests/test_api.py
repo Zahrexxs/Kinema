@@ -123,6 +123,16 @@ def test_output_rejects_unsafe_names(server, job_id, filename):
     assert excinfo.value.status_code == 404
 
 
+def test_output_serves_only_the_jobs_own_artifacts(server, monkeypatch):
+    stub_pipeline(monkeypatch)
+    job_id = upload(server).json()["job_id"]
+    stray = server.outputs / job_id / "stray.csv"
+    stray.write_text("not an artifact", encoding="utf-8")
+
+    assert server.client.get(f"/outputs/{job_id}/stray.csv").status_code == 404
+    assert server.client.get(f"/outputs/{job_id}/{job_id}_metrics.csv").status_code == 200
+
+
 def test_unsupported_extension_returns_415(server):
     response = upload(server, name="notes.txt", content=b"hi", content_type="text/plain")
 

@@ -1,5 +1,4 @@
 import logging
-import re
 import shutil
 import threading
 import time
@@ -31,7 +30,6 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
 COPY_CHUNK_SIZE = 1024 * 1024
 MAX_UPLOAD_BYTES = settings.max_upload_mb * 1024 * 1024
-SAFE_NAME = re.compile(r"^[A-Za-z0-9._-]+$")
 
 app = FastAPI(
     title="Kinema: Automated Human Motion Analysis",
@@ -230,11 +228,18 @@ def get_status(job_id: str):
 
 @app.get("/outputs/{job_id}/{filename}")
 def get_output(job_id: str, filename: str):
-    if not SAFE_NAME.fullmatch(job_id) or not SAFE_NAME.fullmatch(filename):
+    job = _get_job(job_id)
+    if job is None:
         raise HTTPException(status_code=404, detail="File not found")
 
-    file_path = (OUTPUT_DIR / job_id / filename).resolve()
-    if not file_path.is_relative_to(OUTPUT_DIR.resolve()) or not file_path.is_file():
+    # The request selects an artifact the job already produced; it never supplies
+    # a path. Anything else is a 404, including names that exist on disk.
+    artifact = next((name for name in (job.video, job.csv, job.pdf) if name == filename), None)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_path = OUTPUT_DIR / job.id / artifact
+    if not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(file_path)
