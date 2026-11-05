@@ -14,6 +14,7 @@ env/
 # These were previously committed and account for ~115 MB of the repo.
 kinema/api/uploads/
 kinema/api/outputs/
+data/
 *.webm
 
 # MediaPipe model weights (~30 MB), fetched by scripts/fetch_model.sh

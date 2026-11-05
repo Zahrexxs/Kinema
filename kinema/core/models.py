@@ -6,6 +6,17 @@ MODEL_FILENAMES = {
     2: "pose_landmarker_heavy.task",
 }
 
+COMPLEXITY_NAMES = {"lite": 0, "full": 1, "heavy": 2}
+
+
+def complexity_from_name(name: str) -> int:
+    """Map a human-readable variant name (lite/full/heavy) to a complexity level."""
+    try:
+        return COMPLEXITY_NAMES[name.lower()]
+    except KeyError:
+        options = ", ".join(COMPLEXITY_NAMES)
+        raise ValueError(f"complexity must be one of {options} (got {name!r})") from None
+
 
 def model_filename(model_complexity: int) -> str:
     """Return the MediaPipe model filename for a complexity level (0-2)."""

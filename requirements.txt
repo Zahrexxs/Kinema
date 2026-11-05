@@ -5,6 +5,8 @@ fastapi>=0.100.0
 # Required by FastAPI for multipart file uploads (POST /analyze/video).
 python-multipart>=0.0.9
 pydantic>=2.0.0
+# Environment-driven settings (KINEMA_* variables). NoDecode needs >= 2.4.
+pydantic-settings>=2.4.0
 uvicorn>=0.23.0
 pandas>=2.0.0
 matplotlib>=3.7.0

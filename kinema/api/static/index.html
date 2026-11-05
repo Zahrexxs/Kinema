@@ -93,6 +93,24 @@
             cursor: not-allowed;
         }
 
+        .options {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-dim);
+        }
+
+        select {
+            background-color: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--text-dim);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.95rem;
+        }
+
         .status {
             margin-top: 1rem;
             font-weight: 500;
@@ -144,6 +162,15 @@
             <input type="file" id="fileInput" accept="video/*">
         </div>
 
+        <div class="options">
+            <label for="complexity">Model</label>
+            <select id="complexity">
+                <option value="lite">Lite — fastest</option>
+                <option value="full" selected>Full — balanced</option>
+                <option value="heavy">Heavy — most accurate</option>
+            </select>
+        </div>
+
         <button id="uploadBtn" onclick="uploadVideo()">Analyze Motion</button>
 
         <div class="status" id="statusMessage">
@@ -169,6 +196,7 @@
         const fileInput = document.getElementById('fileInput');
         const fileNameDisplay = document.getElementById('fileName');
         const uploadBtn = document.getElementById('uploadBtn');
+        const complexitySelect = document.getElementById('complexity');
         const statusMsg = document.getElementById('statusMessage');
         const loader = document.getElementById('loader');
         const videoContainer = document.getElementById('videoContainer');
@@ -194,17 +222,25 @@
             const file = fileInput.files[0];
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('complexity', complexitySelect.value);
 
             uploadBtn.disabled = true;
             statusMsg.innerText = "Uploading...";
             loader.style.display = "inline-block";
             videoContainer.style.display = "none";
+            downloadCsv.style.display = "none";
+            downloadPdf.style.display = "none";
 
             try {
                 const response = await fetch('/analyze/video', {
                     method: 'POST',
                     body: formData
                 });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.detail || `Upload failed (${response.status})`);
+                }
 
                 const data = await response.json();
                 currentJobId = data.job_id;
@@ -213,7 +249,7 @@
                 pollStatus();
             } catch (error) {
                 console.error(error);
-                statusMsg.innerText = "Error uploading file.";
+                statusMsg.innerText = "Error: " + error.message;
                 uploadBtn.disabled = false;
                 loader.style.display = "none";
             }
@@ -224,6 +260,14 @@
 
             try {
                 const response = await fetch(`/status/${currentJobId}`);
+
+                if (response.status === 404) {
+                    statusMsg.innerText = "Job not found — the server may have restarted.";
+                    loader.style.display = "none";
+                    uploadBtn.disabled = false;
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (data.status === 'completed') {
@@ -246,8 +290,8 @@
                     }
 
                     videoContainer.style.display = "block";
-                } else if (data.status.startsWith('failed')) {
-                    statusMsg.innerText = "Analysis Failed: " + data.status;
+                } else if (data.status === 'failed') {
+                    statusMsg.innerText = "Analysis Failed: " + (data.error || "unknown error");
                     loader.style.display = "none";
                     uploadBtn.disabled = false;
                 } else {
