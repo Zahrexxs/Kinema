@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple, Dict, NamedTuple
+from typing import Optional, Dict
 import numpy as np
 import mediapipe as mp
 # Import new Tasks API
@@ -8,11 +8,8 @@ from mediapipe.tasks.python import vision
 import cv2
 import os
 
-class Location(NamedTuple):
-    x: float
-    y: float
-    z: float
-    visibility: float
+from ahma.core.models import resolve_model_path
+from ahma.core.types import Location
 
 class PoseEstimator(ABC):
     @abstractmethod
@@ -35,14 +32,15 @@ class MediaPipeEstimator(PoseEstimator):
         self.static_image_mode = static_image_mode
         self.timestamp_ms = 0 # For video (stream) mode
         
-        # Determine model path
-        # Assume model is stored in ahma/core/models/pose_landmarker_heavy.task
-        # In a real app, logic would select based on model_complexity
+        # Select the model file for the requested complexity (0=lite, 1=full, 2=heavy).
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(base_dir, "models", "pose_landmarker_heavy.task")
-        
+        model_path = str(resolve_model_path(base_dir, model_complexity))
+
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file not found at {model_path}")
+            raise FileNotFoundError(
+                f"Model file not found at {model_path}. "
+                "Run scripts/fetch_model.sh to download the model weights."
+            )
 
         # Create options
         base_options = python.BaseOptions(model_asset_path=model_path)
