@@ -9,6 +9,7 @@
 ![FastAPI](https://img.shields.io/badge/fastapi-0.100%2B-009688?logo=fastapi&logoColor=white)
 ![MediaPipe](https://img.shields.io/badge/mediapipe-0.10%2B-00897B?logo=google&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/opencv-4.8%2B-5C3EE8?logo=opencv&logoColor=white)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 
 </div>
 
@@ -158,6 +159,6 @@ Worth stating plainly, since several are real:
 
 ## License
 
-No license file is included in this repository, so all rights are reserved.
+[MIT](./LICENSE) © 2026 Muhammad Naufal Azzahri
 MediaPipe model weights are downloaded separately and carry Google's own license
 terms.
