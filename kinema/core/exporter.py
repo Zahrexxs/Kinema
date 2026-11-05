@@ -171,7 +171,8 @@ class MotionExporter:
             pdf.set_font("Helvetica", "B", 12)
             heading = name.replace("_", " ").title()
             if multiple_people:
-                heading = f"Person {person} — {heading}"
+                # The built-in Helvetica font is latin-1 only: no em dashes.
+                heading = f"Person {person} - {heading}"
             pdf.cell(
                 0,
                 10,

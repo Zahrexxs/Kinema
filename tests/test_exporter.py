@@ -94,6 +94,23 @@ def test_metric_columns_skip_bookkeeping_and_empty_series():
     assert MotionExporter._metric_columns(frame) == ["left_elbow_angle"]
 
 
+def test_generate_report_with_two_people(tmp_path):
+    exporter = MotionExporter()
+    for frame in range(4):
+        exporter.add_frame_data(
+            frame, frame / 30, {"left_knee_angle": 90.0 + frame}, tracked=20, person_id=1
+        )
+        exporter.add_frame_data(
+            frame, frame / 30, {"left_knee_angle": 120.0 + frame}, tracked=21, person_id=2
+        )
+
+    pdf_path = exporter.generate_report("two-people", str(tmp_path), 0.2)
+
+    assert Path(pdf_path).is_file()
+    assert Path(pdf_path).stat().st_size > 0
+    assert not list(tmp_path.glob("*.png"))
+
+
 def test_generate_report_handles_sparse_metrics_and_cleans_up(tmp_path):
     exporter = MotionExporter()
     exporter.add_frame_data(0, 0.0, {"left_elbow_angle": 90.0}, tracked=20)
