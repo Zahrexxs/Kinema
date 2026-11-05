@@ -13,22 +13,27 @@ def loc(x, y, z=0.0, visibility=1.0):
 class FakeEstimator(PoseEstimator):
     """Deterministic stand-in for MediaPipe so tests need no model weights."""
 
-    def __init__(self, landmarks=None):
-        self.landmarks = (
-            landmarks
-            if landmarks is not None
-            else {
-                "left_shoulder": loc(0.4, 0.3),
-                "left_elbow": loc(0.5, 0.45),
-                "left_wrist": loc(0.6, 0.6),
-            }
-        )
+    def __init__(self, landmarks=None, poses=None):
+        if poses is not None:
+            self.poses = [pose for pose in poses if pose]
+            self.landmarks = self.poses[0] if self.poses else {}
+        else:
+            self.landmarks = (
+                landmarks
+                if landmarks is not None
+                else {
+                    "left_shoulder": loc(0.4, 0.3),
+                    "left_elbow": loc(0.5, 0.45),
+                    "left_wrist": loc(0.6, 0.6),
+                }
+            )
+            self.poses = [self.landmarks] if self.landmarks else []
         self.frames = 0
         self.closed = False
 
     def process_frame(self, frame, timestamp_ms=None):
         self.frames += 1
-        return self.landmarks
+        return list(self.poses)
 
     def close(self):
         self.closed = True

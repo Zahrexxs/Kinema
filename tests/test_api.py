@@ -13,12 +13,21 @@ from kinema.core.pipeline import AnalysisResult
 def stub_pipeline(monkeypatch, error=None):
     calls = []
 
-    def fake_analyze(input_path, output_dir, *, output_stem, model_complexity=1, **kwargs):
+    def fake_analyze(
+        input_path,
+        output_dir,
+        *,
+        output_stem,
+        model_complexity=1,
+        max_people=1,
+        **kwargs,
+    ):
         calls.append(
             {
                 "input_path": Path(input_path),
                 "output_dir": Path(output_dir),
                 "model_complexity": model_complexity,
+                "max_people": max_people,
             }
         )
         if error is not None:
@@ -170,6 +179,36 @@ def test_complexity_name_is_forwarded(server, monkeypatch):
     upload(server, complexity="heavy")
 
     assert calls[0]["model_complexity"] == 2
+
+
+def test_max_people_is_forwarded(server, monkeypatch):
+    calls = stub_pipeline(monkeypatch)
+
+    upload(server, max_people="3")
+
+    assert calls[0]["max_people"] == 3
+
+
+def test_defaults_are_single_person_full_model(server, monkeypatch):
+    calls = stub_pipeline(monkeypatch)
+
+    upload(server)
+
+    assert calls[0]["max_people"] == 1
+    assert calls[0]["model_complexity"] == 1
+
+
+@pytest.mark.parametrize("max_people", ["0", "5"])
+def test_out_of_range_max_people_returns_400(server, monkeypatch, max_people):
+    stub_pipeline(monkeypatch)
+
+    assert upload(server, max_people=max_people).status_code == 400
+
+
+def test_non_numeric_max_people_is_rejected(server, monkeypatch):
+    stub_pipeline(monkeypatch)
+
+    assert upload(server, max_people="many").status_code == 422
 
 
 def test_invalid_complexity_returns_400(server, monkeypatch):

@@ -116,6 +116,7 @@ trustworthy one.
 | `kinema/core/pipeline.py` | `analyze_video()` — the one frame loop shared by the CLI and the API |
 | `kinema/core/pose_engine.py` | `PoseEstimator` ABC + `MediaPipeEstimator` (MediaPipe Tasks API) |
 | `kinema/core/metrics.py` | `OneEuroFilter`, `MotionAnalyzer` — smoothing, gating, angles |
+| `kinema/core/tracking.py` | `PersonTracker` — stable ids for multi-person clips |
 | `kinema/core/exporter.py` | CSV / PNG / PDF output |
 | `kinema/core/model_registry.py` | Complexity level → MediaPipe model filename |
 | `kinema/config.py` | `KINEMA_*` settings (paths, limits, thresholds, log level) |
@@ -158,6 +159,7 @@ CLI, over a local file:
 ```bash
 kinema --input path/to/video.mp4 --output out/annotated.mp4
 kinema --input path/to/video.mp4 --output out/annotated.mp4 --complexity heavy
+kinema --input path/to/video.mp4 --output out/annotated.mp4 --max-people 2
 ```
 
 `--output` is a **file** path, not a directory. The CSV and PDF are written beside it
@@ -175,7 +177,7 @@ uvicorn kinema.api.main:app --reload
 |---|---|
 | `GET /` | Uploader UI |
 | `GET /health` | Liveness probe for containers and orchestrators |
-| `POST /analyze/video` | Multipart `file` plus optional `complexity`; returns a job id |
+| `POST /analyze/video` | Multipart `file`, optional `complexity` and `max_people`; returns a job id |
 | `GET /status/{job_id}` | `queued` → `processing` → `completed` or `failed` |
 | `GET /outputs/{job_id}/{filename}` | Annotated video, CSV or PDF |
 
@@ -236,8 +238,9 @@ Every setting is read from the environment (or a `.env` file):
 
 - `*_analyzed.webm` — annotated video. VP8 WebM by default; falls back to H.264 or
   MPEG-4 MP4 when the local OpenCV build cannot encode VP8.
-- `*_metrics.csv` — one row per frame: `frame`, `timestamp`, `tracked_landmarks`, six
-  3D angles and six image-plane angles. Missing angles are blank, not zero.
+- `*_metrics.csv` — one row per frame **per person**: `frame`, `timestamp`,
+  `person_id`, `tracked_landmarks`, six 3D angles and six image-plane angles. Missing
+  angles are blank, not zero.
 - `*_report.pdf` — summary statistics plus one graph per metric. The PNG plots are
   produced for the report and removed afterwards.
 
@@ -281,8 +284,11 @@ Worth stating plainly, since several are real:
 - **2D video means monocular depth is inferred, not measured.** The 3D angle depends on
   an estimated `z` and degrades on off-axis camera angles. Prefer `*_angle_2d` when the
   camera is not square to the movement.
-- **No multi-person support.** A single `PoseEstimator` tracks one subject; if two
-  people are in frame the results are not separable.
+- **Multiple people are opt-in, and identities are approximate.** Pass
+  `--max-people 2` (up to 4) and each subject gets its own smoothing, metrics, colour
+  and `person_id`. Detections are matched frame to frame by nearest torso centroid, so
+  two ids can swap when people cross paths. Use it to measure a session, not to track
+  an identity over time.
 - **The PDF export is formatting, not analysis.** It reports the numbers; it does not
   interpret them against any clinical or performance baseline.
 - **Confidence is MediaPipe's own estimate.** Gating removes obviously bad angles, but a

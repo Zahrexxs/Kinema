@@ -9,7 +9,8 @@ import cv2
 from kinema.core.exporter import MotionExporter
 from kinema.core.metrics import DEFAULT_MIN_VISIBILITY, MotionAnalyzer
 from kinema.core.pose_engine import MediaPipeEstimator, PoseEstimator
-from kinema.vis.visualizer import Visualizer
+from kinema.core.tracking import PersonTracker
+from kinema.vis.visualizer import PERSON_COLORS, Visualizer
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ def analyze_video(
     model_complexity: int = 1,
     estimator: PoseEstimator | None = None,
     min_visibility: float = DEFAULT_MIN_VISIBILITY,
+    max_people: int = 1,
     write_csv: bool = True,
     write_pdf: bool = True,
     progress: Callable[[int], None] | None = None,
@@ -70,7 +72,14 @@ def analyze_video(
     Writes ``{stem}_analyzed.webm|mp4``, ``{stem}_metrics.csv`` and
     ``{stem}_report.pdf`` into ``output_dir``. All resources are released even
     when analysis fails, and a partially written video is removed.
+
+    ``max_people`` above 1 detects and tracks several subjects, giving each a
+    stable id in the CSV, its own smoothing and its own set of plots.
     """
+    if not 1 <= max_people <= len(PERSON_COLORS):
+        raise ValueError(
+            f"max_people must be between 1 and {len(PERSON_COLORS)} (got {max_people!r})"
+        )
     video_path = Path(input_path)
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -99,9 +108,11 @@ def analyze_video(
                 model_complexity=model_complexity,
                 min_detection_confidence=0.5,
                 min_tracking_confidence=0.5,
+                num_poses=max_people,
             )
 
-        analyzer = MotionAnalyzer(fps=fps, smooth_landmarks=True)
+        tracker = PersonTracker(max_people=max_people)
+        analyzers: dict[int, MotionAnalyzer] = {}
         visualizer = Visualizer(min_visibility=min_visibility)
         exporter = MotionExporter()
 
@@ -116,17 +127,43 @@ def analyze_video(
                 break
 
             timestamp_s = frame_count / fps
-            landmarks = estimator.process_frame(frame, int(timestamp_s * 1000))
+            poses = estimator.process_frame(frame, int(timestamp_s * 1000))
             output_frame = frame.copy()
 
-            if landmarks:
+            if poses:
                 detected_frames += 1
-                smoothed = analyzer.update_landmarks(landmarks, timestamp_s)
-                metrics = analyzer.compute_metrics(smoothed, min_visibility)
-                tracked = analyzer.count_tracked(smoothed, min_visibility)
-                exporter.add_frame_data(frame_count, timestamp_s, metrics, tracked=tracked)
-                output_frame = visualizer.draw_skeleton(output_frame, smoothed)
-                output_frame = visualizer.draw_metrics(output_frame, metrics, smoothed)
+                people = tracker.assign(poses)
+
+                for index, person in enumerate(people):
+                    analyzer = analyzers.get(person.id)
+                    if analyzer is None:
+                        analyzer = MotionAnalyzer(fps=fps, smooth_landmarks=True)
+                        analyzers[person.id] = analyzer
+
+                    smoothed = analyzer.update_landmarks(person.landmarks, timestamp_s)
+                    metrics = analyzer.compute_metrics(smoothed, min_visibility)
+                    tracked = analyzer.count_tracked(smoothed, min_visibility)
+                    exporter.add_frame_data(
+                        frame_count,
+                        timestamp_s,
+                        metrics,
+                        tracked=tracked,
+                        person_id=person.id,
+                    )
+
+                    output_frame = visualizer.draw_skeleton(
+                        output_frame,
+                        smoothed,
+                        color=PERSON_COLORS[person.id % len(PERSON_COLORS)],
+                        label=f"P{person.id}" if len(people) > 1 else None,
+                    )
+                    # One dashboard only: two would overlap in the same corner.
+                    output_frame = visualizer.draw_metrics(
+                        output_frame,
+                        metrics,
+                        smoothed,
+                        show_dashboard=(index == 0),
+                    )
 
             writer.write(output_frame)
             frame_count += 1

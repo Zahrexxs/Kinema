@@ -17,7 +17,8 @@ class PoseEstimator(ABC):
     @abstractmethod
     def process_frame(
         self, frame: np.ndarray, timestamp_ms: int | None = None
-    ) -> dict[str, Location] | None:
+    ) -> list[dict[str, Location]]:
+        """Return one landmark dict per detected person (empty when none)."""
         pass
 
     @abstractmethod
@@ -40,10 +41,12 @@ class MediaPipeEstimator(PoseEstimator):
         model_complexity: int = 2,
         min_detection_confidence: float = 0.5,
         min_tracking_confidence: float = 0.5,
+        num_poses: int = 1,
     ):
 
         self.static_image_mode = static_image_mode
         self.timestamp_ms = 0  # For video (stream) mode
+        self.num_poses = max(1, int(num_poses))
 
         # Select the model file for the requested complexity (0=lite, 1=full, 2=heavy).
         base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -65,6 +68,7 @@ class MediaPipeEstimator(PoseEstimator):
         options = vision.PoseLandmarkerOptions(
             base_options=base_options,
             running_mode=running_mode,
+            num_poses=self.num_poses,
             min_pose_detection_confidence=min_detection_confidence,
             min_pose_presence_confidence=min_detection_confidence,  # proxy for tracking
             min_tracking_confidence=min_tracking_confidence,
@@ -112,7 +116,7 @@ class MediaPipeEstimator(PoseEstimator):
 
     def process_frame(
         self, frame: np.ndarray, timestamp_ms: int | None = None
-    ) -> dict[str, Location] | None:
+    ) -> list[dict[str, Location]]:
         # Convert to mp.Image
         mp_image = mp.Image(
             image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -130,17 +134,17 @@ class MediaPipeEstimator(PoseEstimator):
             detection_result = self.landmarker.detect_for_video(mp_image, self.timestamp_ms)
 
         if not detection_result.pose_landmarks:
-            return None
+            return []
 
-        # Process first person
-        landmarks_raw = detection_result.pose_landmarks[0]
+        poses = []
+        for landmarks_raw in detection_result.pose_landmarks[: self.num_poses]:
+            landmarks = {}
+            for idx, lm in enumerate(landmarks_raw):
+                name = self.landmark_names.get(idx, f"unknown_{idx}")
+                landmarks[name] = Location(x=lm.x, y=lm.y, z=lm.z, visibility=lm.visibility)
+            poses.append(landmarks)
 
-        landmarks = {}
-        for idx, lm in enumerate(landmarks_raw):
-            name = self.landmark_names.get(idx, f"unknown_{idx}")
-            landmarks[name] = Location(x=lm.x, y=lm.y, z=lm.z, visibility=lm.visibility)
-
-        return landmarks
+        return poses
 
     def close(self):
         self.landmarker.close()
