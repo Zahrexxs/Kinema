@@ -13,12 +13,21 @@ from kinema.core.types import Location
 
 class PoseEstimator(ABC):
     @abstractmethod
-    def process_frame(self, frame: np.ndarray) -> Optional[Dict[str, Location]]:
+    def process_frame(
+        self, frame: np.ndarray, timestamp_ms: Optional[int] = None
+    ) -> Optional[Dict[str, Location]]:
         pass
 
     @abstractmethod
     def close(self):
         pass
+
+    def __enter__(self) -> "PoseEstimator":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        self.close()
+        return False
 
 class MediaPipeEstimator(PoseEstimator):
     """MediaPipe Pose implementation using Tasks API (Vision)."""
@@ -71,17 +80,22 @@ class MediaPipeEstimator(PoseEstimator):
             32: 'right_foot_index'
         }
 
-    def process_frame(self, frame: np.ndarray) -> Optional[Dict[str, Location]]:
+    def process_frame(
+        self, frame: np.ndarray, timestamp_ms: Optional[int] = None
+    ) -> Optional[Dict[str, Location]]:
         # Convert to mp.Image
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         
         if self.static_image_mode:
             detection_result = self.landmarker.detect(mp_image)
         else:
-            # Video mode requires timestamp
-            self.timestamp_ms += 33 # Assume ~30fps if not provided, for strict monotonicity
-            # Ideally we pass real timestamp, but for file processing this is ok
-            detection_result = self.landmarker.detect_for_video(mp_image, int(self.timestamp_ms))
+            # Video mode requires strictly increasing timestamps. Callers that know
+            # the real frame rate pass the true timestamp; otherwise fall back to 30fps.
+            if timestamp_ms is None:
+                self.timestamp_ms += 33
+            else:
+                self.timestamp_ms = max(int(timestamp_ms), self.timestamp_ms + 1)
+            detection_result = self.landmarker.detect_for_video(mp_image, self.timestamp_ms)
             
         if not detection_result.pose_landmarks:
             return None
