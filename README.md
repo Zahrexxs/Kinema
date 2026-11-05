@@ -4,7 +4,7 @@
 
 **Raw video in. Joint angles, plots and a PDF report out.**
 
-![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 [![CI](https://github.com/Zahrexxs/Sport-Analysis-Project/actions/workflows/ci.yml/badge.svg)](https://github.com/Zahrexxs/Sport-Analysis-Project/actions/workflows/ci.yml)
 ![FastAPI](https://img.shields.io/badge/fastapi-0.100%2B-009688?logo=fastapi&logoColor=white)
 ![MediaPipe](https://img.shields.io/badge/mediapipe-0.10%2B-00897B?logo=google&logoColor=white)
