@@ -88,12 +88,15 @@ def _sweep_expired() -> None:
 
 
 def _validated_suffix(file: UploadFile) -> str:
-    suffix = Path(file.filename or "").suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
+    requested = Path(file.filename or "").suffix.lower()
+    # Pick the canonical value out of the allowlist rather than echoing the
+    # request back; only these five strings can influence a filesystem path.
+    suffix = next((ext for ext in ALLOWED_EXTENSIONS if ext == requested), None)
+    if suffix is None:
         allowed = ", ".join(sorted(ALLOWED_EXTENSIONS))
         raise HTTPException(
             status_code=415,
-            detail=f"Unsupported video type '{suffix or file.filename}'. Allowed: {allowed}",
+            detail=(f"Unsupported video type '{requested or file.filename}'. Allowed: {allowed}"),
         )
 
     content_type = file.content_type or ""
