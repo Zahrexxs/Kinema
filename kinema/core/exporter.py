@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Optional
+from collections.abc import Sequence
 
 import matplotlib
 
@@ -22,11 +22,11 @@ class MotionExporter:
         self,
         frame_idx: int,
         timestamp: float,
-        metrics: Dict[str, float],
-        tracked: Optional[int] = None,
+        metrics: dict[str, float],
+        tracked: int | None = None,
     ) -> None:
         """Accumulate data for a single frame."""
-        record: Dict[str, float] = {"frame": frame_idx, "timestamp": timestamp}
+        record: dict[str, float] = {"frame": frame_idx, "timestamp": timestamp}
         if tracked is not None:
             record["tracked_landmarks"] = tracked
         record.update(metrics)
@@ -60,7 +60,7 @@ class MotionExporter:
         ]
 
     @staticmethod
-    def _table_widths(pdf: FPDF, rows: list[tuple[str, ...]]) -> list[float]:
+    def _table_widths(pdf: FPDF, rows: Sequence[tuple[str, ...]]) -> list[float]:
         """Fit the table to the page instead of letting long names overflow."""
         widths = []
         for index in range(len(rows[0])):
@@ -94,9 +94,7 @@ class MotionExporter:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(
-            0, 10, "Kinema Motion Analysis Report", new_x="LMARGIN", new_y="NEXT", align="C"
-        )
+        pdf.cell(0, 10, "Kinema Motion Analysis Report", new_x="LMARGIN", new_y="NEXT", align="C")
 
         pdf.set_font("Helvetica", "", 12)
         pdf.cell(0, 10, f"Job ID: {job_id}", new_x="LMARGIN", new_y="NEXT")
@@ -137,7 +135,7 @@ class MotionExporter:
         if len(rows) > 1:
             widths = self._table_widths(pdf, rows)
             for row in rows:
-                for text, width in zip(row, widths):
+                for text, width in zip(row, widths, strict=False):
                     pdf.cell(width, 8, text, border=1)
                 pdf.ln(8)
 

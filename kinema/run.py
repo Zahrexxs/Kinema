@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 def _video_path(value: str) -> Path:
     path = Path(value)
     if path.is_dir():
-        raise argparse.ArgumentTypeError(
-            f"--output must be a file path, got a directory: {path}"
-        )
+        raise argparse.ArgumentTypeError(f"--output must be a file path, got a directory: {path}")
     return path
 
 

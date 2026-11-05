@@ -1,0 +1,18 @@
+version: 2
+
+updates:
+  # Ranges live in pyproject.toml; requirements.lock is regenerated when a
+  # dependency bump is merged (see README "Dependencies").
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

@@ -8,10 +8,7 @@ from kinema.core.pose_engine import MediaPipeEstimator
 
 
 def raw_landmarks(count=33):
-    return [
-        SimpleNamespace(x=index / 100, y=0.5, z=-0.1, visibility=0.9)
-        for index in range(count)
-    ]
+    return [SimpleNamespace(x=index / 100, y=0.5, z=-0.1, visibility=0.9) for index in range(count)]
 
 
 class FakeLandmarker:
@@ -38,9 +35,7 @@ def make_estimator(monkeypatch, tmp_path):
     def _make(landmarks=None, static_image_mode=False):
         model = tmp_path / "pose_landmarker_full.task"
         model.write_bytes(b"stub")
-        monkeypatch.setattr(
-            pose_engine, "resolve_model_path", lambda base_dir, complexity: model
-        )
+        monkeypatch.setattr(pose_engine, "resolve_model_path", lambda base_dir, complexity: model)
 
         landmarker = FakeLandmarker(landmarks)
 
@@ -80,13 +75,19 @@ def test_missing_model_raises_with_fetch_hint(monkeypatch, tmp_path):
         pose_engine, "resolve_model_path", lambda base_dir, complexity: tmp_path / "nope.task"
     )
 
-    with pytest.raises(FileNotFoundError, match="fetch_model.sh"):
+    with pytest.raises(FileNotFoundError, match="kinema.fetch_models"):
         MediaPipeEstimator()
 
 
 @pytest.mark.parametrize(
     ("index", "name"),
-    [(0, "nose"), (11, "left_shoulder"), (23, "left_hip"), (27, "left_ankle"), (32, "right_foot_index")],
+    [
+        (0, "nose"),
+        (11, "left_shoulder"),
+        (23, "left_hip"),
+        (27, "left_ankle"),
+        (32, "right_foot_index"),
+    ],
 )
 def test_landmark_names_cover_all_33_points(make_estimator, index, name):
     estimator, _ = make_estimator()
@@ -132,9 +133,7 @@ def test_missing_timestamp_falls_back_to_30fps(make_estimator):
 
 
 def test_static_mode_uses_detect(make_estimator):
-    estimator, landmarker = make_estimator(
-        landmarks=[raw_landmarks()], static_image_mode=True
-    )
+    estimator, landmarker = make_estimator(landmarks=[raw_landmarks()], static_image_mode=True)
 
     estimator.process_frame(frame())
 

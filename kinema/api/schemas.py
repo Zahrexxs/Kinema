@@ -1,11 +1,11 @@
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class JobState(str, Enum):
+class JobState(StrEnum):
     QUEUED = "queued"
     PROCESSING = "processing"
     COMPLETED = "completed"

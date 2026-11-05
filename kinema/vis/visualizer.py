@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
-from typing import Dict, Tuple
+
 from kinema.core.types import Location
+
 
 class Visualizer:
     def __init__(self, min_visibility: float = 0.5):
@@ -12,38 +13,38 @@ class Visualizer:
         self.COLOR_JOINT = (245, 66, 230)
         self.COLOR_TEXT = (255, 255, 255)
         self.COLOR_BG_BOX = (0, 0, 0)
-        
+
         # Connections definition (pairs of landmark names)
         # Standard skeleton topology
         self.CONNECTIONS = [
             # Torso
-            ('left_shoulder', 'right_shoulder'),
-            ('left_shoulder', 'left_hip'),
-            ('right_shoulder', 'right_hip'),
-            ('left_hip', 'right_hip'),
+            ("left_shoulder", "right_shoulder"),
+            ("left_shoulder", "left_hip"),
+            ("right_shoulder", "right_hip"),
+            ("left_hip", "right_hip"),
             # Arms
-            ('left_shoulder', 'left_elbow'),
-            ('left_elbow', 'left_wrist'),
-            ('right_shoulder', 'right_elbow'),
-            ('right_elbow', 'right_wrist'),
+            ("left_shoulder", "left_elbow"),
+            ("left_elbow", "left_wrist"),
+            ("right_shoulder", "right_elbow"),
+            ("right_elbow", "right_wrist"),
             # Legs
-            ('left_hip', 'left_knee'),
-            ('left_knee', 'left_ankle'),
-            ('right_hip', 'right_knee'),
-            ('right_knee', 'right_ankle'),
+            ("left_hip", "left_knee"),
+            ("left_knee", "left_ankle"),
+            ("right_hip", "right_knee"),
+            ("right_knee", "right_ankle"),
             # Feet (Simple)
-            ('left_ankle', 'left_heel'),
-            ('left_ankle', 'left_foot_index'), 
-            ('right_ankle', 'right_heel'),
-            ('right_ankle', 'right_foot_index')
+            ("left_ankle", "left_heel"),
+            ("left_ankle", "left_foot_index"),
+            ("right_ankle", "right_heel"),
+            ("right_ankle", "right_foot_index"),
         ]
 
-    def draw_skeleton(self, frame: np.ndarray, landmarks: Dict[str, Location]) -> np.ndarray:
+    def draw_skeleton(self, frame: np.ndarray, landmarks: dict[str, Location]) -> np.ndarray:
         h, w, _ = frame.shape
         output = frame.copy()
-        
+
         # Helper to get pixel coords
-        def to_pixel(loc: Location) -> Tuple[int, int]:
+        def to_pixel(loc: Location) -> tuple[int, int]:
             return int(loc.x * w), int(loc.y * h)
 
         # 1. Draw Bones
@@ -51,19 +52,24 @@ class Visualizer:
             if start_name in landmarks and end_name in landmarks:
                 start = landmarks[start_name]
                 end = landmarks[end_name]
-                
+
                 # Check visibility
-                if start.visibility >= self.min_visibility and end.visibility >= self.min_visibility:
+                if (
+                    start.visibility >= self.min_visibility
+                    and end.visibility >= self.min_visibility
+                ):
                     cv2.line(output, to_pixel(start), to_pixel(end), self.COLOR_BONE, 2)
 
         # 2. Draw Joints
-        for name, loc in landmarks.items():
+        for _name, loc in landmarks.items():
             if loc.visibility >= self.min_visibility:
                 cv2.circle(output, to_pixel(loc), 4, self.COLOR_JOINT, -1)
-                
+
         return output
 
-    def draw_metrics(self, frame: np.ndarray, metrics: Dict[str, float], landmarks: Dict[str, Location]) -> np.ndarray:
+    def draw_metrics(
+        self, frame: np.ndarray, metrics: dict[str, float], landmarks: dict[str, Location]
+    ) -> np.ndarray:
         h, w, _ = frame.shape
         output = frame.copy()
 
@@ -71,18 +77,22 @@ class Visualizer:
         def draw_text(img, text, pos, scale=0.6):
             (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)
             # Background box
-            cv2.rectangle(img, (pos[0], pos[1] - th - 5), (pos[0] + tw, pos[1] + 5), self.COLOR_BG_BOX, -1)
-            cv2.putText(img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, scale, self.COLOR_TEXT, 1, cv2.LINE_AA)
+            cv2.rectangle(
+                img, (pos[0], pos[1] - th - 5), (pos[0] + tw, pos[1] + 5), self.COLOR_BG_BOX, -1
+            )
+            cv2.putText(
+                img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, scale, self.COLOR_TEXT, 1, cv2.LINE_AA
+            )
 
         # 1. Draw Angle Labels at Joints
         # Mapping metric name to joint location
         metric_loc_map = {
-            'left_elbow_angle': 'left_elbow',
-            'right_elbow_angle': 'right_elbow',
-            'left_knee_angle': 'left_knee',
-            'right_knee_angle': 'right_knee',
-            'left_hip_angle': 'left_hip', 
-            'right_hip_angle': 'right_hip'
+            "left_elbow_angle": "left_elbow",
+            "right_elbow_angle": "right_elbow",
+            "left_knee_angle": "left_knee",
+            "right_knee_angle": "right_knee",
+            "left_hip_angle": "left_hip",
+            "right_hip_angle": "right_hip",
         }
 
         for metric_name, value in metrics.items():
@@ -99,12 +109,12 @@ class Visualizer:
         y_offset = 30
         draw_text(output, "BIO-MECHANICS METRICS", (10, y_offset), scale=0.7)
         y_offset += 25
-        
+
         for name, value in metrics.items():
             if name.endswith("_2d"):
                 continue
             # Format name: left_knee_angle -> L.Knee
-            short_name = name.replace('left_', 'L.').replace('right_', 'R.').replace('_angle', '')
+            short_name = name.replace("left_", "L.").replace("right_", "R.").replace("_angle", "")
             text = f"{short_name}: {int(value)}"
             draw_text(output, text, (10, y_offset))
             y_offset += 20
