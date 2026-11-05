@@ -109,6 +109,7 @@ def analyze_video(
 
         started = time.perf_counter()
         frame_count = 0
+        detected_frames = 0
         while True:
             ok, frame = cap.read()
             if not ok:
@@ -119,6 +120,7 @@ def analyze_video(
             output_frame = frame.copy()
 
             if landmarks:
+                detected_frames += 1
                 smoothed = analyzer.update_landmarks(landmarks, timestamp_s)
                 metrics = analyzer.compute_metrics(smoothed, min_visibility)
                 tracked = analyzer.count_tracked(smoothed, min_visibility)
@@ -130,6 +132,16 @@ def analyze_video(
             frame_count += 1
             if progress is not None:
                 progress(frame_count)
+
+        # A clip the model cannot see a person in would otherwise "succeed" with an
+        # empty CSV and no report, which reads like a valid measurement.
+        if frame_count == 0:
+            raise RuntimeError(f"No frames could be read from {video_path}")
+        if detected_frames == 0:
+            raise RuntimeError(
+                f"No pose detected in any of {frame_count} frames of {video_path}. "
+                "Check that one person is fully visible for most of the clip."
+            )
 
         duration = time.perf_counter() - started
     except BaseException as exc:
