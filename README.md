@@ -21,6 +21,7 @@ a marker or sensor rig.
 
 ## Contents
 
+- [Demo](#demo)
 - [Why this exists](#why-this-exists)
 - [How it works](#how-it-works)
 - [Layout](#layout)
@@ -32,6 +33,22 @@ a marker or sensor rig.
 - [Dependencies](#dependencies)
 - [Known limitations](#known-limitations)
 - [License](#license)
+
+## Demo
+
+A seven-second barbell back squat, processed with `kinema --complexity full`:
+
+![Annotated frame: skeleton, joint angles and the metrics dashboard](docs/annotated-frame.png)
+
+![Joint angles over time for both knees and both hips](docs/angle-series.png)
+
+The right knee travels from 170° standing to 81° at the bottom of the rep. Gaps in the
+curves are frames where a leg was occluded: the angle is dropped rather than guessed,
+and `tracked_landmarks` in the CSV records how much of the skeleton was visible.
+
+Demo footage: [Squat – exercise demonstration video](https://commons.wikimedia.org/wiki/File:Squat_-_exercise_demonstration_video.webm)
+by FitnessScape, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via
+Wikimedia Commons.
 
 ## Why this exists
 
