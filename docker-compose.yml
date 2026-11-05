@@ -1,0 +1,19 @@
+services:
+  kinema:
+    build:
+      context: .
+    image: kinema:latest
+    ports:
+      - "8000:8000"
+    environment:
+      KINEMA_LOG_LEVEL: INFO
+      KINEMA_MODEL_COMPLEXITY: "1"
+      KINEMA_MAX_UPLOAD_MB: "200"
+      KINEMA_JOB_TTL_HOURS: "24"
+    volumes:
+      # Uploads and reports survive container restarts.
+      - kinema-data:/data
+    restart: unless-stopped
+
+volumes:
+  kinema-data:

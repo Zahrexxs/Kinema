@@ -194,6 +194,13 @@ def test_expired_jobs_and_artifacts_are_swept(server, monkeypatch):
     assert not (server.uploads / job_id).exists()
 
 
+def test_health_reports_ok(server):
+    response = server.client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_index_is_served(server):
     response = server.client.get("/")
 

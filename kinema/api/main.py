@@ -160,6 +160,12 @@ def process_video_task(
     )
 
 
+@app.get("/health")
+def health():
+    """Liveness probe for containers and orchestrators."""
+    return {"status": "ok"}
+
+
 @app.get("/")
 def read_root():
     index = STATIC_DIR / "index.html"
