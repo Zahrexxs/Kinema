@@ -10,6 +10,11 @@ env/
 *.egg-info/
 .pytest_cache/
 
+# Test and coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+
 # Runtime data — user uploads and generated artifacts, not source.
 # These were previously committed and account for ~115 MB of the repo.
 kinema/api/uploads/
@@ -17,7 +22,7 @@ kinema/api/outputs/
 data/
 *.webm
 
-# MediaPipe model weights (~30 MB), fetched by scripts/fetch_model.sh
+# MediaPipe model weights (~30 MB), fetched by `python -m kinema.fetch_models`
 kinema/core/models/*.task
 
 # OS

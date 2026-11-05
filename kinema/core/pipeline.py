@@ -1,8 +1,8 @@
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import cv2
 
@@ -34,7 +34,12 @@ def _open_writer(
     width, height = size
     for fourcc, suffix in WRITER_CANDIDATES:
         path = output_dir / f"{stem}_analyzed{suffix}"
-        writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*fourcc), fps, size)
+        writer = cv2.VideoWriter(
+            str(path),
+            cv2.VideoWriter_fourcc(*fourcc),  # type: ignore[attr-defined]
+            fps,
+            size,
+        )
         if writer.isOpened():
             logger.debug("Writing annotated video with %s to %s", fourcc, path)
             return writer, path
@@ -148,9 +153,7 @@ def analyze_video(
         report = exporter.generate_report(stem, str(out_dir), duration)
         pdf_path = Path(report) if report else None
 
-    logger.debug(
-        "Analyzed %s: %d frames in %.2fs", video_path, frame_count, duration
-    )
+    logger.debug("Analyzed %s: %d frames in %.2fs", video_path, frame_count, duration)
 
     return AnalysisResult(
         video_path=annotated_path,

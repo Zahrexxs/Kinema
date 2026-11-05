@@ -5,7 +5,6 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Dict
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,7 +49,7 @@ app.add_middleware(
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-jobs: Dict[str, Job] = {}
+jobs: dict[str, Job] = {}
 jobs_lock = threading.Lock()
 
 
@@ -100,11 +99,12 @@ def _validated_suffix(file: UploadFile) -> str:
         )
 
     content_type = file.content_type or ""
-    if content_type and not content_type.startswith("video/"):
-        if content_type != "application/octet-stream":
-            raise HTTPException(
-                status_code=415, detail=f"Unsupported content type '{content_type}'"
-            )
+    if (
+        content_type
+        and not content_type.startswith("video/")
+        and content_type != "application/octet-stream"
+    ):
+        raise HTTPException(status_code=415, detail=f"Unsupported content type '{content_type}'")
 
     return suffix
 

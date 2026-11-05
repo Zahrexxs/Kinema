@@ -137,9 +137,7 @@ def test_supplied_timestamps_match_internal_clock():
         from_internal = internal.update_landmarks(landmarks)
         from_explicit = explicit.update_landmarks(landmarks, t=index / 30.0)
 
-        assert from_explicit["left_elbow"].x == pytest.approx(
-            from_internal["left_elbow"].x
-        )
+        assert from_explicit["left_elbow"].x == pytest.approx(from_internal["left_elbow"].x)
 
 
 @pytest.mark.parametrize("fps", [0, -1, -30.0])
@@ -172,9 +170,7 @@ def test_min_visibility_can_be_lowered():
     assert "left_elbow_angle" in metrics
 
 
-@pytest.mark.parametrize(
-    ("threshold", "expected"), [(0.5, 1), (0.1, 2), (0.0, 3)]
-)
+@pytest.mark.parametrize(("threshold", "expected"), [(0.5, 1), (0.1, 2), (0.0, 3)])
 def test_count_tracked_uses_the_supplied_threshold(threshold, expected):
     landmarks = {
         "a": loc(0, 0, visibility=0.9),

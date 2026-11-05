@@ -55,9 +55,7 @@ def server(tmp_path, monkeypatch):
     monkeypatch.setattr(api, "OUTPUT_DIR", outputs)
     monkeypatch.setattr(api, "jobs", jobs)
 
-    return SimpleNamespace(
-        client=TestClient(api.app), uploads=uploads, outputs=outputs, jobs=jobs
-    )
+    return SimpleNamespace(client=TestClient(api.app), uploads=uploads, outputs=outputs, jobs=jobs)
 
 
 def upload(server, name="clip.mp4", content=b"fake video", content_type="video/mp4", **data):

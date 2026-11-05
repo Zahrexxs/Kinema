@@ -23,9 +23,7 @@ def model_filename(model_complexity: int) -> str:
     try:
         return MODEL_FILENAMES[model_complexity]
     except KeyError:
-        raise ValueError(
-            f"model_complexity must be 0, 1 or 2 (got {model_complexity!r})"
-        ) from None
+        raise ValueError(f"model_complexity must be 0, 1 or 2 (got {model_complexity!r})") from None
 
 
 def resolve_model_path(base_dir: str | Path, model_complexity: int) -> Path:

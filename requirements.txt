@@ -1,15 +1,1 @@
-mediapipe>=0.10.0
-opencv-python>=4.8.0
-numpy>=1.24.0
-fastapi>=0.100.0
-# Required by FastAPI for multipart file uploads (POST /analyze/video).
-python-multipart>=0.0.9
-pydantic>=2.0.0
-# Environment-driven settings (KINEMA_* variables). NoDecode needs >= 2.4.
-pydantic-settings>=2.4.0
-uvicorn>=0.23.0
-pandas>=2.0.0
-matplotlib>=3.7.0
-fpdf2>=2.7.0
-# Transitive via matplotlib; 12.x has open CVEs fixed in 13.0.0.
-pillow>=13.0.0
+-e .

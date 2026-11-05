@@ -1,5 +1,4 @@
 import math
-from typing import Dict, Optional
 
 import numpy as np
 
@@ -8,7 +7,7 @@ from kinema.core.types import Location
 DEFAULT_MIN_VISIBILITY = 0.5
 
 # Each angle is measured at the middle landmark of the triplet.
-ANGLE_TRIPLETS: Dict[str, tuple[str, str, str]] = {
+ANGLE_TRIPLETS: dict[str, tuple[str, str, str]] = {
     "left_elbow_angle": ("left_shoulder", "left_elbow", "left_wrist"),
     "right_elbow_angle": ("right_shoulder", "right_elbow", "right_wrist"),
     "left_knee_angle": ("left_hip", "left_knee", "left_ankle"),
@@ -77,7 +76,7 @@ class MotionAnalyzer:
         self.use_filters = smooth_landmarks
 
         # Filters for each coordinate of each landmark: {landmark_name: {axis: OneEuroFilter}}
-        self.filters: Dict[str, Dict[str, OneEuroFilter]] = {}
+        self.filters: dict[str, dict[str, OneEuroFilter]] = {}
         self.current_time = 0.0
 
     def _get_filter(self, name: str, axis: str, initial_value: float) -> OneEuroFilter:
@@ -95,8 +94,8 @@ class MotionAnalyzer:
         return self.filters[name][axis]
 
     def update_landmarks(
-        self, landmarks: Dict[str, Location], t: Optional[float] = None
-    ) -> Dict[str, Location]:
+        self, landmarks: dict[str, Location], t: float | None = None
+    ) -> dict[str, Location]:
         """Apply smoothing to landmarks.
 
         ``t`` is the timestamp in seconds. Callers that know the true frame time
@@ -173,7 +172,7 @@ class MotionAnalyzer:
         return np.degrees(angle)
 
     def count_tracked(
-        self, landmarks: Dict[str, Location], min_visibility: Optional[float] = None
+        self, landmarks: dict[str, Location], min_visibility: float | None = None
     ) -> int:
         """Number of landmarks confident enough to be trusted."""
         threshold = DEFAULT_MIN_VISIBILITY if min_visibility is None else min_visibility
@@ -181,10 +180,10 @@ class MotionAnalyzer:
 
     def _triplet(
         self,
-        landmarks: Dict[str, Location],
+        landmarks: dict[str, Location],
         names: tuple[str, str, str],
         min_visibility: float,
-    ) -> Optional[tuple[Location, Location, Location]]:
+    ) -> tuple[Location, Location, Location] | None:
         points = []
         for name in names:
             location = landmarks.get(name)
@@ -195,9 +194,9 @@ class MotionAnalyzer:
 
     def compute_metrics(
         self,
-        landmarks: Dict[str, Location],
-        min_visibility: Optional[float] = None,
-    ) -> Dict[str, float]:
+        landmarks: dict[str, Location],
+        min_visibility: float | None = None,
+    ) -> dict[str, float]:
         """Compute biomechanical angles for every fully visible joint chain.
 
         An angle is only reported when all three contributing landmarks clear
@@ -207,7 +206,7 @@ class MotionAnalyzer:
         """
         threshold = DEFAULT_MIN_VISIBILITY if min_visibility is None else min_visibility
 
-        metrics: Dict[str, float] = {}
+        metrics: dict[str, float] = {}
         for name, names in ANGLE_TRIPLETS.items():
             points = self._triplet(landmarks, names, threshold)
             if points is None:
