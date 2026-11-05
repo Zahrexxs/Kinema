@@ -2,7 +2,7 @@ import numpy as np
 import math
 from typing import Dict, Optional, List, Deque
 from collections import deque
-from ahma.core.types import Location
+from kinema.core.types import Location
 
 class OneEuroFilter:
     """

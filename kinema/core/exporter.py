@@ -53,7 +53,7 @@ class MotionExporter:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Helvetica", 'B', 16)
-        pdf.cell(0, 10, "AHMA Motion Analysis Report", new_x="LMARGIN", new_y="NEXT", align='C')
+        pdf.cell(0, 10, "Kinema Motion Analysis Report", new_x="LMARGIN", new_y="NEXT", align='C')
 
         pdf.set_font("Helvetica", '', 12)
         pdf.cell(0, 10, f"Job ID: {job_id}", new_x="LMARGIN", new_y="NEXT")

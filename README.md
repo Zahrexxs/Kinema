@@ -1,11 +1,11 @@
 <div align="center">
 
-# AHMA — Automated Human Motion Analysis
+# Kinema
 
-**Raw video in. Joint angles, plots and a PDF report out.**
+**Automated human motion analysis — raw video in, joint angles and PDF reports out.**
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
-[![CI](https://github.com/Zahrexxs/Sport-Analysis-Project/actions/workflows/ci.yml/badge.svg)](https://github.com/Zahrexxs/Sport-Analysis-Project/actions/workflows/ci.yml)
+[![CI](https://github.com/Zahrexxs/Kinema/actions/workflows/ci.yml/badge.svg)](https://github.com/Zahrexxs/Kinema/actions/workflows/ci.yml)
 ![FastAPI](https://img.shields.io/badge/fastapi-0.100%2B-009688?logo=fastapi&logoColor=white)
 ![MediaPipe](https://img.shields.io/badge/mediapipe-0.10%2B-00897B?logo=google&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/opencv-4.8%2B-5C3EE8?logo=opencv&logoColor=white)
@@ -71,7 +71,7 @@ makes every downstream metric useless.
 The standard fix is a fixed low-pass filter, but that has a bad trade-off: smoothing
 hard enough to kill jitter at rest also smears genuine fast movement.
 
-[`OneEuroFilter`](ahma/core/metrics.py) resolves this by adapting its cutoff to
+[`OneEuroFilter`](kinema/core/metrics.py) resolves this by adapting its cutoff to
 observed speed — heavy smoothing when a joint is nearly still, light smoothing when it
 moves fast. That's what lets the angle series stay flat during a held position without
 turning a swing into a ramp.
@@ -80,12 +80,12 @@ turning a swing into a ramp.
 
 | Path | What lives there |
 |---|---|
-| `ahma/core/pose_engine.py` | `PoseEstimator` ABC + `MediaPipeEstimator` (MediaPipe Tasks API) |
-| `ahma/core/metrics.py` | `OneEuroFilter`, `MotionAnalyzer` — smoothing and joint-angle derivation |
-| `ahma/core/exporter.py` | CSV / PNG / PDF output |
-| `ahma/api/main.py` | FastAPI service — upload, background analysis, result retrieval |
-| `ahma/vis/visualizer.py` | Annotated-frame rendering |
-| `ahma/run.py` | CLI entry point for local batch processing |
+| `kinema/core/pose_engine.py` | `PoseEstimator` ABC + `MediaPipeEstimator` (MediaPipe Tasks API) |
+| `kinema/core/metrics.py` | `OneEuroFilter`, `MotionAnalyzer` — smoothing and joint-angle derivation |
+| `kinema/core/exporter.py` | CSV / PNG / PDF output |
+| `kinema/api/main.py` | FastAPI service — upload, background analysis, result retrieval |
+| `kinema/vis/visualizer.py` | Annotated-frame rendering |
+| `kinema/run.py` | CLI entry point for local batch processing |
 | `scripts/fetch_model.sh` | Downloads the Pose Landmarker weights |
 
 The `PoseEstimator` interface is deliberate: the analysis pipeline depends on the
@@ -95,8 +95,8 @@ one class, not touching `metrics.py`.
 ## Setup
 
 ```bash
-git clone https://github.com/Zahrexxs/Sport-Analysis-Project.git
-cd Sport-Analysis-Project
+git clone https://github.com/Zahrexxs/Kinema.git
+cd Kinema
 
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -113,13 +113,13 @@ Google's MediaPipe CDN. `model_complexity` selects the file: `0` lite, `1` full,
 CLI, over a local file:
 
 ```bash
-python -m ahma.run --input path/to/video.mp4 --output out/
+python -m kinema.run --input path/to/video.mp4 --output out/
 ```
 
 HTTP service:
 
 ```bash
-uvicorn ahma.api.main:app --reload
+uvicorn kinema.api.main:app --reload
 # then POST a video to /analyze, poll the job, fetch the report
 ```
 

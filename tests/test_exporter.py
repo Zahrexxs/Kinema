@@ -6,7 +6,7 @@ import pytest
 
 matplotlib.use("Agg")
 
-from ahma.core.exporter import MotionExporter
+from kinema.core.exporter import MotionExporter
 
 
 def test_export_csv_writes_one_row_per_frame(tmp_path):

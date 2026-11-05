@@ -12,12 +12,12 @@ env/
 
 # Runtime data — user uploads and generated artifacts, not source.
 # These were previously committed and account for ~115 MB of the repo.
-ahma/api/uploads/
-ahma/api/outputs/
+kinema/api/uploads/
+kinema/api/outputs/
 *.webm
 
 # MediaPipe model weights (~30 MB), fetched by scripts/fetch_model.sh
-ahma/core/models/*.task
+kinema/core/models/*.task
 
 # OS
 .DS_Store

@@ -8,12 +8,12 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from ahma.core.pose_engine import MediaPipeEstimator
-from ahma.core.metrics import MotionAnalyzer
-from ahma.vis.visualizer import Visualizer
+from kinema.core.pose_engine import MediaPipeEstimator
+from kinema.core.metrics import MotionAnalyzer
+from kinema.vis.visualizer import Visualizer
 
 # Initialize App
-app = FastAPI(title="AHMA: Automated Human Motion Analysis")
+app = FastAPI(title="Kinema: Automated Human Motion Analysis")
 
 # CORS (Allow all for development)
 app.add_middleware(
@@ -56,10 +56,10 @@ def process_video_task(job_id: str, input_path: str, output_path: str):
         
         import cv2
         import time
-        from ahma.core.pose_engine import MediaPipeEstimator
-        from ahma.core.metrics import MotionAnalyzer
-        from ahma.vis.visualizer import Visualizer
-        from ahma.core.exporter import MotionExporter
+        from kinema.core.pose_engine import MediaPipeEstimator
+        from kinema.core.metrics import MotionAnalyzer
+        from kinema.vis.visualizer import Visualizer
+        from kinema.core.exporter import MotionExporter
 
         start_time = time.time()
 

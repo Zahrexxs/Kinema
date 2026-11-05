@@ -1,7 +1,7 @@
 import pytest
 
-from ahma.core.metrics import MotionAnalyzer
-from ahma.core.types import Location
+from kinema.core.metrics import MotionAnalyzer
+from kinema.core.types import Location
 
 
 def loc(x, y, z=0.0, visibility=1.0):
