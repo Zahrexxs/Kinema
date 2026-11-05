@@ -74,7 +74,6 @@ jobs:
   quality:
     name: lint, types and audit
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -102,3 +101,50 @@ jobs:
 
       - name: Audit dependencies
         run: pip-audit -r requirements.lock
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Validate the compose file
+        run: docker compose config -q
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: kinema:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start container
+        run: docker run -d --name kinema -p 8000:8000 kinema:ci
+
+      - name: Wait for the health endpoint
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              echo
+              echo "healthy after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "container never became healthy"
+          docker logs kinema
+          exit 1
+
+      - name: Import mediapipe inside the container
+        # The interesting failure mode: PortAudio aborts on import without a
+        # running PulseAudio server, which the entrypoint provides.
+        run: docker exec kinema python -c "import mediapipe, cv2; print('mediapipe', mediapipe.__version__, 'cv2', cv2.__version__)"
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs kinema

@@ -157,6 +157,7 @@ uvicorn kinema.api.main:app --reload
 | Endpoint | Purpose |
 |---|---|
 | `GET /` | Uploader UI |
+| `GET /health` | Liveness probe for containers and orchestrators |
 | `POST /analyze/video` | Multipart `file` plus optional `complexity`; returns a job id |
 | `GET /status/{job_id}` | `queued` → `processing` → `completed` or `failed` |
 | `GET /outputs/{job_id}/{filename}` | Annotated video, CSV or PDF |
@@ -185,6 +186,19 @@ pulseaudio --start --exit-idle-time=-1
 
 Without a running PulseAudio server, `import mediapipe` raises `PortAudioError`
 before any video is processed.
+
+The repository ships a `Dockerfile` and `docker-compose.yml` that do exactly this:
+
+```bash
+docker compose up --build
+# http://127.0.0.1:8000
+```
+
+The image installs those libraries, bakes in the `lite`/`full`/`heavy` weights
+(`--build-arg KINEMA_MODEL_VARIANTS="lite"` for a smaller image), runs as a non-root
+user, keeps uploads and reports in the `kinema-data` volume, and exposes the
+`/health` probe. CI builds the image and smoke-tests that endpoint, because the
+PortAudio failure only shows up in a fresh container.
 
 ## Configuration
 
