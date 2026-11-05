@@ -4,7 +4,9 @@ from typing import Dict, Tuple
 from kinema.core.types import Location
 
 class Visualizer:
-    def __init__(self):
+    def __init__(self, min_visibility: float = 0.5):
+        self.min_visibility = min_visibility
+
         # Colors (BGR)
         self.COLOR_BONE = (245, 117, 66)
         self.COLOR_JOINT = (245, 66, 230)
@@ -51,12 +53,12 @@ class Visualizer:
                 end = landmarks[end_name]
                 
                 # Check visibility
-                if start.visibility > 0.5 and end.visibility > 0.5:
+                if start.visibility >= self.min_visibility and end.visibility >= self.min_visibility:
                     cv2.line(output, to_pixel(start), to_pixel(end), self.COLOR_BONE, 2)
 
         # 2. Draw Joints
         for name, loc in landmarks.items():
-            if loc.visibility > 0.5:
+            if loc.visibility >= self.min_visibility:
                 cv2.circle(output, to_pixel(loc), 4, self.COLOR_JOINT, -1)
                 
         return output
@@ -87,7 +89,7 @@ class Visualizer:
             joint_name = metric_loc_map.get(metric_name)
             if joint_name and joint_name in landmarks:
                 loc = landmarks[joint_name]
-                if loc.visibility > 0.5:
+                if loc.visibility >= self.min_visibility:
                     px, py = int(loc.x * w), int(loc.y * h)
                     # Label format: "125°"
                     label = f"{int(value)}deg"
@@ -99,6 +101,8 @@ class Visualizer:
         y_offset += 25
         
         for name, value in metrics.items():
+            if name.endswith("_2d"):
+                continue
             # Format name: left_knee_angle -> L.Knee
             short_name = name.replace('left_', 'L.').replace('right_', 'R.').replace('_angle', '')
             text = f"{short_name}: {int(value)}"

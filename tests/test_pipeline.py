@@ -144,3 +144,39 @@ def test_metrics_accumulate_only_while_tracked(synthetic_video, tmp_path):
         rows = list(csv.DictReader(handle))
     assert len(rows) == 4
     assert "left_elbow_angle" not in rows[0]
+
+
+def test_csv_reports_tracked_landmarks_and_2d_angles(synthetic_video, tmp_path):
+    result = analyze_video(
+        synthetic_video(frames=3),
+        tmp_path / "out",
+        estimator=FakeEstimator(),
+        write_pdf=False,
+    )
+
+    with result.csv_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert rows[0]["tracked_landmarks"] == "3"
+    assert "left_elbow_angle" in rows[0]
+    assert "left_elbow_angle_2d" in rows[0]
+
+
+def test_low_visibility_landmarks_produce_no_angles(synthetic_video, tmp_path):
+    faint = {
+        name: loc(value.x, value.y, value.z, 0.1)
+        for name, value in FakeEstimator().landmarks.items()
+    }
+
+    result = analyze_video(
+        synthetic_video(frames=3),
+        tmp_path / "out",
+        estimator=FakeEstimator(landmarks=faint),
+        write_pdf=False,
+    )
+
+    with result.csv_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert "left_elbow_angle" not in rows[0]
+    assert rows[0]["tracked_landmarks"] == "0"

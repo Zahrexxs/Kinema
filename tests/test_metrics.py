@@ -58,8 +58,9 @@ def test_compute_metrics_returns_elbow_angle():
 
     metrics = analyzer.compute_metrics(landmarks)
 
-    assert metrics == pytest.approx({"left_elbow_angle": 90.0})
-    assert set(metrics) == {"left_elbow_angle"}
+    assert set(metrics) == {"left_elbow_angle", "left_elbow_angle_2d"}
+    assert metrics["left_elbow_angle"] == pytest.approx(90.0)
+    assert metrics["left_elbow_angle_2d"] == pytest.approx(90.0)
 
 
 def test_compute_metrics_returns_all_six_angles():
@@ -88,11 +89,19 @@ def test_compute_metrics_returns_all_six_angles():
         "right_knee_angle",
         "left_hip_angle",
         "right_hip_angle",
+        "left_elbow_angle_2d",
+        "right_elbow_angle_2d",
+        "left_knee_angle_2d",
+        "right_knee_angle_2d",
+        "left_hip_angle_2d",
+        "right_hip_angle_2d",
     }
     assert metrics["left_elbow_angle"] == pytest.approx(90.0)
     assert metrics["right_elbow_angle"] == pytest.approx(90.0)
     assert metrics["left_knee_angle"] == pytest.approx(180.0)
     assert metrics["right_knee_angle"] == pytest.approx(180.0)
+    assert metrics["left_hip_angle"] == pytest.approx(180.0)
+    assert metrics["right_hip_angle"] == pytest.approx(180.0)
 
 
 def test_compute_metrics_without_joints_returns_empty():
@@ -137,3 +146,40 @@ def test_supplied_timestamps_match_internal_clock():
 def test_non_positive_fps_raises(fps):
     with pytest.raises(ValueError, match="fps must be positive"):
         MotionAnalyzer(fps=fps)
+
+
+def test_low_visibility_landmark_suppresses_the_angle():
+    analyzer = MotionAnalyzer()
+    landmarks = {
+        "left_shoulder": loc(0, 0),
+        "left_elbow": loc(1, 0),
+        "left_wrist": loc(1, 1, visibility=0.2),
+    }
+
+    assert analyzer.compute_metrics(landmarks) == {}
+
+
+def test_min_visibility_can_be_lowered():
+    analyzer = MotionAnalyzer()
+    landmarks = {
+        "left_shoulder": loc(0, 0),
+        "left_elbow": loc(1, 0),
+        "left_wrist": loc(1, 1, visibility=0.2),
+    }
+
+    metrics = analyzer.compute_metrics(landmarks, min_visibility=0.1)
+
+    assert "left_elbow_angle" in metrics
+
+
+@pytest.mark.parametrize(
+    ("threshold", "expected"), [(0.5, 1), (0.1, 2), (0.0, 3)]
+)
+def test_count_tracked_uses_the_supplied_threshold(threshold, expected):
+    landmarks = {
+        "a": loc(0, 0, visibility=0.9),
+        "b": loc(0, 0, visibility=0.4),
+        "c": loc(0, 0, visibility=0.0),
+    }
+
+    assert MotionAnalyzer().count_tracked(landmarks, threshold) == expected

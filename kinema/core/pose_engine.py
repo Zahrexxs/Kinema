@@ -8,7 +8,7 @@ from mediapipe.tasks.python import vision
 import cv2
 import os
 
-from kinema.core.models import resolve_model_path
+from kinema.core.model_registry import resolve_model_path
 from kinema.core.types import Location
 
 class PoseEstimator(ABC):
