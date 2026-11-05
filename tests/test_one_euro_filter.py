@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from ahma.core.metrics import OneEuroFilter
+from kinema.core.metrics import OneEuroFilter
 
 
 def test_smoothing_factor_matches_formula():

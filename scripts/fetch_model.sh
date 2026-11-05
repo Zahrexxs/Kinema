@@ -3,7 +3,7 @@
 # runtime. They are gitignored because the "heavy" variant alone is ~30 MB.
 set -euo pipefail
 
-MODEL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/ahma/core/models"
+MODEL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/kinema/core/models"
 BASE="https://storage.googleapis.com/mediapipe-models/pose_landmarker"
 
 mkdir -p "$MODEL_DIR"

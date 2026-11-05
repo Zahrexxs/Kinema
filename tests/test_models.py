@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ahma.core.models import model_filename, resolve_model_path
+from kinema.core.models import model_filename, resolve_model_path
 
 
 @pytest.mark.parametrize(
@@ -24,6 +24,6 @@ def test_invalid_complexity_raises(complexity):
 
 
 def test_resolve_model_path_uses_models_directory():
-    path = resolve_model_path("/tmp/ahma/core", 1)
+    path = resolve_model_path("/tmp/kinema/core", 1)
 
-    assert path == Path("/tmp/ahma/core/models/pose_landmarker_full.task")
+    assert path == Path("/tmp/kinema/core/models/pose_landmarker_full.task")

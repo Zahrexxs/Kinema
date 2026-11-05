@@ -8,8 +8,8 @@ from mediapipe.tasks.python import vision
 import cv2
 import os
 
-from ahma.core.models import resolve_model_path
-from ahma.core.types import Location
+from kinema.core.models import resolve_model_path
+from kinema.core.types import Location
 
 class PoseEstimator(ABC):
     @abstractmethod

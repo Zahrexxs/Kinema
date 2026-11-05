@@ -2,9 +2,9 @@ import cv2
 import argparse
 import sys
 import time
-from ahma.core.pose_engine import MediaPipeEstimator
-from ahma.core.metrics import MotionAnalyzer
-from ahma.vis.visualizer import Visualizer
+from kinema.core.pose_engine import MediaPipeEstimator
+from kinema.core.metrics import MotionAnalyzer
+from kinema.vis.visualizer import Visualizer
 
 def process_video(input_path: str, output_path: str):
     print(f"Processing video: {input_path}")
