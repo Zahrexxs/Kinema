@@ -4,3 +4,8 @@ numpy>=1.24.0
 fastapi>=0.100.0
 pydantic>=2.0.0
 uvicorn>=0.23.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+fpdf2>=2.7.0
+# Transitive via matplotlib; 12.x has open CVEs fixed in 13.0.0.
+pillow>=13.0.0

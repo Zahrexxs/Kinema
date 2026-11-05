@@ -8,7 +8,7 @@ BASE="https://storage.googleapis.com/mediapipe-models/pose_landmarker"
 
 mkdir -p "$MODEL_DIR"
 
-for variant in full heavy; do
+for variant in lite full heavy; do
   dest="$MODEL_DIR/pose_landmarker_${variant}.task"
   if [ -f "$dest" ]; then
     echo "==> ${variant}: already present, skipping"
@@ -21,5 +21,5 @@ done
 
 echo "Models ready in $MODEL_DIR"
 echo
-echo "Note: MediaPipeEstimator currently hardcodes the 'heavy' model path and"
-echo "ignores model_complexity. See the Known limitations section of the README."
+echo "MediaPipeEstimator selects pose_landmarker_{lite,full,heavy}.task"
+echo "from model_complexity 0, 1 and 2 respectively."

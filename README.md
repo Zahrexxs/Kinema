@@ -4,7 +4,8 @@
 
 **Raw video in. Joint angles, plots and a PDF report out.**
 
-![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
+[![CI](https://github.com/Zahrexxs/Sport-Analysis-Project/actions/workflows/ci.yml/badge.svg)](https://github.com/Zahrexxs/Sport-Analysis-Project/actions/workflows/ci.yml)
 ![FastAPI](https://img.shields.io/badge/fastapi-0.100%2B-009688?logo=fastapi&logoColor=white)
 ![MediaPipe](https://img.shields.io/badge/mediapipe-0.10%2B-00897B?logo=google&logoColor=white)
 ![OpenCV](https://img.shields.io/badge/opencv-4.8%2B-5C3EE8?logo=opencv&logoColor=white)
@@ -24,6 +25,7 @@ a marker or sensor rig.
 - [Layout](#layout)
 - [Setup](#setup)
 - [Usage](#usage)
+- [Testing](#testing)
 - [Outputs](#outputs)
 - [Known limitations](#known-limitations)
 - [License](#license)
@@ -101,8 +103,9 @@ pip install -r requirements.txt
 bash scripts/fetch_model.sh
 ```
 
-The model weights are gitignored (`~30 MB`); `fetch_model.sh` pulls them from
-Google's MediaPipe CDN.
+The model weights are gitignored; `fetch_model.sh` pulls all three variants from
+Google's MediaPipe CDN. `model_complexity` selects the file: `0` lite, `1` full,
+`2` heavy.
 
 ## Usage
 
@@ -119,6 +122,18 @@ uvicorn ahma.api.main:app --reload
 # then POST a video to /analyze, poll the job, fetch the report
 ```
 
+## Testing
+
+The unit suite covers the One Euro filter, joint-angle math, model selection and
+the exporter. It runs without model weights or a video file.
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+CI runs the same command on Python 3.11 for every push and pull request.
+
 ## Outputs
 
 - `*_metrics.csv` — per-frame angle values
@@ -130,9 +145,6 @@ uvicorn ahma.api.main:app --reload
 
 Worth stating plainly, since several are real:
 
-- **`model_complexity` is ignored.** `MediaPipeEstimator.__init__` accepts the
-  parameter but hardcodes `pose_landmarker_heavy.task`, so the "full" model is fetched
-  and never used. Wiring this up properly means selecting the path from the parameter.
 - **The 33-landmark skeleton is roughly upper- and lower-body coarse.** Finger and
   wrist articulation is not resolvable, so "grip strength" or "wrist deviation" style
   measurements are out of scope.

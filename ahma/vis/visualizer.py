@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from typing import Dict, Tuple
-from ahma.core.pose_engine import Location
+from ahma.core.types import Location
 
 class Visualizer:
     def __init__(self):

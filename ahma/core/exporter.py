@@ -52,19 +52,19 @@ class MotionExporter:
         # 2. Create PDF
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, f"AHMA Motion Analysis Report", ln=True, align='C')
-        
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, f"Job ID: {job_id}", ln=True)
-        pdf.cell(0, 10, f"Duration: {duration:.2f} seconds", ln=True)
-        pdf.cell(0, 10, f"Total Frames: {len(df)}", ln=True)
+        pdf.set_font("Helvetica", 'B', 16)
+        pdf.cell(0, 10, "AHMA Motion Analysis Report", new_x="LMARGIN", new_y="NEXT", align='C')
+
+        pdf.set_font("Helvetica", '', 12)
+        pdf.cell(0, 10, f"Job ID: {job_id}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 10, f"Duration: {duration:.2f} seconds", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 10, f"Total Frames: {len(df)}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(10)
 
         # 3. Summary Stats Table
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, "Summary Statistics", ln=True)
-        pdf.set_font("Arial", '', 10)
+        pdf.set_font("Helvetica", 'B', 14)
+        pdf.cell(0, 10, "Summary Statistics", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", '', 10)
         
         # Header
         col_width = 40
@@ -85,13 +85,13 @@ class MotionExporter:
         pdf.ln(10)
         
         # 4. Embed Plots
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, "Motion Graphs", ln=True)
-        
+        pdf.set_font("Helvetica", 'B', 14)
+        pdf.cell(0, 10, "Motion Graphs", new_x="LMARGIN", new_y="NEXT")
+
         for name, path in plot_files:
             pdf.add_page()
-            pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 10, name.replace('_', ' ').title(), ln=True)
+            pdf.set_font("Helvetica", 'B', 12)
+            pdf.cell(0, 10, name.replace('_', ' ').title(), new_x="LMARGIN", new_y="NEXT")
             pdf.image(path, x=10, w=190)
             # Cleanup temp image
             os.remove(path)
