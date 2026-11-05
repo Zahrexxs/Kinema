@@ -117,3 +117,23 @@ def test_update_landmarks_without_smoothing_returns_input():
     landmarks = {"left_elbow": loc(1, 2)}
 
     assert analyzer.update_landmarks(landmarks) is landmarks
+
+
+def test_supplied_timestamps_match_internal_clock():
+    internal = MotionAnalyzer(fps=30.0)
+    explicit = MotionAnalyzer(fps=30.0)
+    landmarks = {"left_elbow": loc(0.0, 0.0)}
+
+    for index in range(1, 20):
+        from_internal = internal.update_landmarks(landmarks)
+        from_explicit = explicit.update_landmarks(landmarks, t=index / 30.0)
+
+        assert from_explicit["left_elbow"].x == pytest.approx(
+            from_internal["left_elbow"].x
+        )
+
+
+@pytest.mark.parametrize("fps", [0, -1, -30.0])
+def test_non_positive_fps_raises(fps):
+    with pytest.raises(ValueError, match="fps must be positive"):
+        MotionAnalyzer(fps=fps)

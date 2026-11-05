@@ -46,6 +46,8 @@ class OneEuroFilter:
 
 class MotionAnalyzer:
     def __init__(self, fps: float = 30.0, smooth_landmarks: bool = True):
+        if fps <= 0:
+            raise ValueError(f"fps must be positive (got {fps!r})")
         self.fps = fps
         self.dt = 1.0 / fps
         self.use_filters = smooth_landmarks
@@ -71,9 +73,18 @@ class MotionAnalyzer:
             )
         return self.filters[name][axis]
 
-    def update_landmarks(self, landmarks: Dict[str, Location]) -> Dict[str, Location]:
-        """Apply smoothing to landmarks."""
-        self.current_time += self.dt
+    def update_landmarks(
+        self, landmarks: Dict[str, Location], t: Optional[float] = None
+    ) -> Dict[str, Location]:
+        """Apply smoothing to landmarks.
+
+        ``t`` is the timestamp in seconds. Callers that know the true frame time
+        should pass it; omitting it advances the clock by ``1 / fps``.
+        """
+        if t is None:
+            self.current_time += self.dt
+        else:
+            self.current_time = t
         
         if not self.use_filters:
             return landmarks

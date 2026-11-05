@@ -4,13 +4,11 @@ import uuid
 from typing import Dict
 
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from kinema.core.pose_engine import MediaPipeEstimator
-from kinema.core.metrics import MotionAnalyzer
-from kinema.vis.visualizer import Visualizer
+from kinema.core.pipeline import analyze_video
 
 # Initialize App
 app = FastAPI(title="Kinema: Automated Human Motion Analysis")
@@ -44,117 +42,38 @@ def read_root():
 # Job Storage (In-memory for MVP)
 jobs: Dict[str, str] = {} # job_id -> status
 
-def process_video_task(job_id: str, input_path: str, output_path: str):
-    """Background task wrapper for video processing."""
+def process_video_task(job_id: str, input_path: str):
+    """Background task wrapper around the shared analysis pipeline."""
     try:
         jobs[job_id] = "processing"
-        
-        # NOTE: In a real system, we'd import the pipeline logic from run.py or refactor it to a function
-        # Since run.py has process_video, let's reuse a similar logic here or import it if modular enough.
-        # Ideally, I should have put process_video in a separate lib module.
-        # For now, I will re-implement the loop here to ensure clean integration with no stdout spam.
-        
-        import cv2
-        import time
-        from kinema.core.pose_engine import MediaPipeEstimator
-        from kinema.core.metrics import MotionAnalyzer
-        from kinema.vis.visualizer import Visualizer
-        from kinema.core.exporter import MotionExporter
 
-        start_time = time.time()
+        result = analyze_video(
+            input_path,
+            OUTPUT_DIR,
+            output_stem=job_id,
+            model_complexity=1, # 1 for speed
+        )
 
+        csv_name = result.csv_path.name if result.csv_path else "none"
+        pdf_name = result.pdf_path.name if result.pdf_path else "none"
 
-        cap = cv2.VideoCapture(input_path)
-        if not cap.isOpened():
-            jobs[job_id] = "failed: cannot open video"
-            return
-            
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        if fps <= 0: fps = 30.0
-
-        pose_estimator = MediaPipeEstimator(model_complexity=1) # 1 for speed
-        motion_analyzer = MotionAnalyzer(fps=fps, smooth_landmarks=True)
-        visualizer = Visualizer()
-        exporter = MotionExporter()
-
-        fourcc = cv2.VideoWriter_fourcc(*'avc1') # H.264 for web compatibility (if opencv supports it)
-        # Fallback to mp4v if avc1 fails in environment
-        # Note: Browsers like mp4 (h264). mp4v might not play in all browsers. 
-        # VP8/9 (webm) is safer for web if ffmpeg is available.
-        
-        # Let's try to infer a good codec or just use mp4v and hope browser supports it (Chrome often does)
-        # Using 'vp80' => .webm is often safer for immediate web playback without transcoding.
-        output_path_webm = output_path.replace(".mp4", ".webm")
-        out = cv2.VideoWriter(output_path_webm, cv2.VideoWriter_fourcc(*'vp80'), fps, (width, height))
-        
-        if not out.isOpened():
-             # Fallback to mp4v
-             out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
-             final_output = output_path
-        else:
-             final_output = output_path_webm
-
-        frame_count = 0
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            landmarks = pose_estimator.process_frame(frame)
-            output_frame = frame.copy()
-            
-            if landmarks:
-                smoothed_landmarks = motion_analyzer.update_landmarks(landmarks)
-                metrics = motion_analyzer.compute_metrics(smoothed_landmarks)
-                
-                # Accumulate Data
-                current_time = frame_count / fps
-                exporter.add_frame_data(frame_count, current_time, metrics)
-                
-                output_frame = visualizer.draw_skeleton(output_frame, smoothed_landmarks)
-                output_frame = visualizer.draw_metrics(output_frame, metrics, smoothed_landmarks)
-            
-            out.write(output_frame)
-            frame_count += 1
-            
-        cap.release()
-        out.release()
-        pose_estimator.close()
-        
-        
-        end_time = time.time()
-        duration = end_time - start_time
-        
-        # Generate Reports
-        csv_path = os.path.join(OUTPUT_DIR, f"{job_id}_metrics.csv")
-        exporter.export_csv(csv_path)
-        
-        # NOTE: PDF generation might differ in path logic
-        # For simplicity, exporter uses output_dir + job_id
-        
-        # We manually call generate_report but it writes to file
-        pdf_path = exporter.generate_report(job_id, OUTPUT_DIR, duration)
-        
         # Format: completed:filename:duration:csv_name:pdf_name
-        csv_name = os.path.basename(csv_path)
-        pdf_name = os.path.basename(pdf_path) if pdf_path else "none"
-        
-        jobs[job_id] = f"completed:{os.path.basename(final_output)}:{duration:.2f}:{csv_name}:{pdf_name}"
-        
+        jobs[job_id] = (
+            f"completed:{result.video_path.name}:{result.duration:.2f}:"
+            f"{csv_name}:{pdf_name}"
+        )
+
     except Exception as e:
         print(f"Job {job_id} failed: {e}")
         jobs[job_id] = f"failed: {str(e)}"
 
 @app.post("/analyze/video")
-async def analyze_video(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def analyze_video_endpoint(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     job_id = str(uuid.uuid4())
     
     # Save Upload
     file_ext = os.path.splitext(file.filename)[1]
     input_path = os.path.join(UPLOAD_DIR, f"{job_id}{file_ext}")
-    output_path = os.path.join(OUTPUT_DIR, f"{job_id}_analyzed.mp4")
     
     with open(input_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -162,7 +81,7 @@ async def analyze_video(background_tasks: BackgroundTasks, file: UploadFile = Fi
     jobs[job_id] = "queued"
     
     # Start Task
-    background_tasks.add_task(process_video_task, job_id, input_path, output_path)
+    background_tasks.add_task(process_video_task, job_id, input_path)
     
     return {"job_id": job_id, "status": "queued"}
 
