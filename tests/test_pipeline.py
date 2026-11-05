@@ -146,6 +146,20 @@ def test_metrics_accumulate_only_while_tracked(synthetic_video, tmp_path):
     assert "left_elbow_angle" not in rows[0]
 
 
+def test_raises_when_no_pose_is_detected(synthetic_video, tmp_path):
+    output_dir = tmp_path / "out"
+
+    with pytest.raises(RuntimeError, match="No pose detected"):
+        analyze_video(
+            synthetic_video(frames=3),
+            output_dir,
+            estimator=FakeEstimator(landmarks={}),
+        )
+
+    assert not list(output_dir.glob("*_analyzed.*"))
+    assert not list(output_dir.glob("*.csv"))
+
+
 def test_csv_reports_tracked_landmarks_and_2d_angles(synthetic_video, tmp_path):
     result = analyze_video(
         synthetic_video(frames=3),

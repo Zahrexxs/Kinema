@@ -167,6 +167,25 @@ artifacts are kept for `KINEMA_JOB_TTL_HOURS` and swept on the next upload. The 
 registry lives in the process, so run a single worker or status polling will miss jobs
 handled by another one.
 
+If the model finds no person in any frame, the run fails with
+`No pose detected in any of N frames` instead of reporting an empty measurement. An
+empty CSV would look like a valid result with zero movement.
+
+### Headless and container deployments
+
+`mediapipe` imports `sounddevice`, which initialises PortAudio at import time even
+though Kinema never touches audio, and OpenCV links GL/EGL. A minimal Linux image
+needs the same libraries CI installs:
+
+```bash
+apt-get install -y --no-install-recommends \
+  libgl1 libglib2.0-0 libegl1 libgles2 libportaudio2 pulseaudio
+pulseaudio --start --exit-idle-time=-1
+```
+
+Without a running PulseAudio server, `import mediapipe` raises `PortAudioError`
+before any video is processed.
+
 ## Configuration
 
 Every setting is read from the environment (or a `.env` file):
